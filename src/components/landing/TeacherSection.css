@@ -47,6 +47,25 @@
   line-height: 1.6;
 }
 
+.teacher-tools-link {
+  display: inline-block;
+  margin-top: var(--space-8);
+  padding: var(--space-3) var(--space-6);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-inverse, #fff);
+  background-color: var(--color-action-primary, var(--spark));
+  border: none;
+  border-radius: var(--radius-md, 0.5rem);
+  cursor: pointer;
+  transition: opacity var(--transition-fast, 120ms ease);
+}
+
+.teacher-tools-link:hover {
+  opacity: 0.9;
+}
+
 @media (min-width: 768px) {
   .teacher-section {
     padding: var(--space-11) var(--space-6);

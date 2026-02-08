@@ -1,0 +1,47 @@
+/**
+ * Global focus indicator styles for accessibility.
+ *
+ * Uses :focus-visible to show focus outlines only for keyboard navigation.
+ * Minimum 2px outline using --think color for high visibility.
+ */
+
+/* Enhanced focus indicators for interactive elements */
+:focus-visible {
+  outline: 3px solid var(--think, #7b68ee);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm, 0.25rem);
+}
+
+/* Remove default outline for mouse/pointer users */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Buttons — ensure high-contrast focus ring */
+button:focus-visible,
+[role='button']:focus-visible {
+  outline: 3px solid var(--think, #7b68ee);
+  outline-offset: 2px;
+}
+
+/* Links */
+a:focus-visible {
+  outline: 3px solid var(--think, #7b68ee);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm, 0.25rem);
+}
+
+/* Inputs and selects */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--think, #7b68ee);
+  outline-offset: 2px;
+}
+
+/* Range slider — ensure thumb gets visible focus */
+input[type='range']:focus-visible {
+  outline: 3px solid var(--think, #7b68ee);
+  outline-offset: 2px;
+  border-radius: var(--radius-full, 9999px);
+}

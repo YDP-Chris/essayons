@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import { activateFocusTrap } from '@/shared/accessibility/focus-trap.ts'
 import './Drawer.css'
 
 export interface DrawerProps {
@@ -11,11 +12,33 @@ export interface DrawerProps {
 export function Drawer({ open, onClose, title, children }: DrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const triggerRef = useRef<HTMLElement | null>(null)
 
-  // Focus trap: focus close button when drawer opens
+  // Capture the element that triggered the drawer opening
+  useEffect(() => {
+    if (open) {
+      triggerRef.current = document.activeElement as HTMLElement | null
+    }
+  }, [open])
+
+  // Focus close button when drawer opens
   useEffect(() => {
     if (open && closeButtonRef.current) {
       closeButtonRef.current.focus()
+    }
+  }, [open])
+
+  // Focus trap: constrain Tab within drawer
+  useEffect(() => {
+    if (!open || !drawerRef.current) return
+
+    const trap = activateFocusTrap({
+      container: drawerRef.current,
+      returnFocusTo: triggerRef.current,
+    })
+
+    return () => {
+      trap.deactivate()
     }
   }, [open])
 

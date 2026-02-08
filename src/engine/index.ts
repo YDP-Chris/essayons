@@ -11,6 +11,7 @@ export { SimulationEngine } from './SimulationEngine.ts'
 export { DiscreteEngine } from './DiscreteEngine.ts'
 export { StateMachine } from './StateMachine.ts'
 export { TurnManager } from './TurnManager.ts'
+export { QualityMonitor } from './adaptive-quality.ts'
 
 export { DEFAULT_ENGINE_CONFIG } from './types.ts'
 
@@ -62,3 +63,4 @@ export type {
 
 export type { StateMachineSnapshot } from './StateMachine.ts'
 export type { TurnManagerSnapshot } from './TurnManager.ts'
+export type { QualityLevel, QualitySnapshot } from './adaptive-quality.ts'

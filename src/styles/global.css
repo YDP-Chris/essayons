@@ -2,6 +2,8 @@
 @import './typography.css';
 @import './colors.css';
 @import './accessibility.css';
+@import '../shared/accessibility/focus-styles.css';
+@import '../shared/accessibility/reduced-motion.css';
 
 :root {
   /* Core Palette */

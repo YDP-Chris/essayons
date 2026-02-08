@@ -24,7 +24,7 @@ export const bridgeLabConfig: EpisodeConfig = {
       type: 'number',
       default: 1000,
       min: 100,
-      max: 10000,
+      max: 100000,
       step: 100,
       unit: 'kg',
       description: 'Applied load at center of bridge',

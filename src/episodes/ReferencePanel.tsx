@@ -107,7 +107,7 @@ export function ReferencePanel({ references }: ReferencePanelProps) {
       className="reference-panel"
     >
       {availableTabs.length > 1 && (
-        <nav className="reference-panel__tabs" role="tablist" aria-label="Reference categories">
+        <div className="reference-panel__tabs" role="tablist" aria-label="Reference categories">
           {availableTabs.map((tab) => (
             <Button
               key={tab.key}
@@ -121,7 +121,7 @@ export function ReferencePanel({ references }: ReferencePanelProps) {
               {tab.label}
             </Button>
           ))}
-        </nav>
+        </div>
       )}
 
       <div className="reference-panel__list" role="tabpanel">

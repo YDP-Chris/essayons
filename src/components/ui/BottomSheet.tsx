@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import { activateFocusTrap } from '@/shared/accessibility/focus-trap.ts'
 import './BottomSheet.css'
 
 export interface BottomSheetProps {
@@ -11,11 +12,33 @@ export interface BottomSheetProps {
 export function BottomSheet({ open, onClose, title, children }: BottomSheetProps) {
   const sheetRef = useRef<HTMLDivElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const triggerRef = useRef<HTMLElement | null>(null)
+
+  // Capture the element that triggered the sheet opening
+  useEffect(() => {
+    if (open) {
+      triggerRef.current = document.activeElement as HTMLElement | null
+    }
+  }, [open])
 
   // Focus close button when sheet opens
   useEffect(() => {
     if (open && closeButtonRef.current) {
       closeButtonRef.current.focus()
+    }
+  }, [open])
+
+  // Focus trap: constrain Tab within sheet
+  useEffect(() => {
+    if (!open || !sheetRef.current) return
+
+    const trap = activateFocusTrap({
+      container: sheetRef.current,
+      returnFocusTo: triggerRef.current,
+    })
+
+    return () => {
+      trap.deactivate()
     }
   }, [open])
 

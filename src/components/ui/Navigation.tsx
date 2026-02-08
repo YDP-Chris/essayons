@@ -32,7 +32,7 @@ export const Navigation = forwardRef<HTMLElement, NavigationProps>(function Navi
   return (
     <nav ref={ref} className={classes} aria-label={ariaLabel} {...rest}>
       {brand != null && <div className="nav-brand">{brand}</div>}
-      <ul className="nav-items" role="list">
+      <ul className="nav-items">
         {items.map((item) => (
           <li key={item.href}>
             {renderLink ? (

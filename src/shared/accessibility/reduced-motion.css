@@ -1,0 +1,27 @@
+/**
+ * Reduced motion support.
+ *
+ * When the user has prefers-reduced-motion: reduce enabled, all
+ * CSS animations and transitions are minimized. This file provides
+ * an additional safety net beyond the global rule in accessibility.css.
+ *
+ * Individual components that have their own @media (prefers-reduced-motion)
+ * rules (DomainOrbit, Drawer, BottomSheet) are handled inline.
+ */
+
+@media (prefers-reduced-motion: reduce) {
+  /* Suppress all animations and transitions globally */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Disable smooth scrolling */
+  html {
+    scroll-behavior: auto !important;
+  }
+}

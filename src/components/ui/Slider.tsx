@@ -47,6 +47,9 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(function Slider(
         className="slider-input"
         value={value}
         defaultValue={defaultValue}
+        aria-valuemin={rest.min != null ? Number(rest.min) : undefined}
+        aria-valuemax={rest.max != null ? Number(rest.max) : undefined}
+        aria-valuenow={value != null ? Number(value) : undefined}
         aria-valuetext={formattedValue}
         {...rest}
       />

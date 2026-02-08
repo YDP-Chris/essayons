@@ -1,3 +1,4 @@
+import { navigate } from '@/shared/router/router.ts'
 import './TeacherSection.css'
 
 export function TeacherSection() {
@@ -11,7 +12,7 @@ export function TeacherSection() {
           Share a link, and your students are learning. No setup, no accounts, no IT requests.
           Essayons is free and instant.
         </p>
-        <ul className="teacher-features" role="list">
+        <ul className="teacher-features">
           <li className="teacher-feature">
             <span className="teacher-feature-icon" aria-hidden="true">
               {'\u{1F517}'}
@@ -31,6 +32,9 @@ export function TeacherSection() {
             <span>No accounts or personal data required</span>
           </li>
         </ul>
+        <button type="button" className="teacher-tools-link" onClick={() => navigate('/teach')}>
+          Teacher Tools
+        </button>
       </div>
     </section>
   )

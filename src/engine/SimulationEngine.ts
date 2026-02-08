@@ -23,6 +23,7 @@ import { ParameterSystem } from './ParameterSystem.ts'
 import { CanvasRenderer } from './CanvasRenderer.ts'
 import { InputHandler } from './InputHandler.ts'
 import { MissionManager } from './MissionManager.ts'
+import { QualityMonitor } from './adaptive-quality.ts'
 
 /** Number of frames to average for FPS tracking. */
 const FPS_SAMPLE_COUNT = 60
@@ -34,6 +35,7 @@ export class SimulationEngine implements SimulationEngineInterface, Subscribable
   readonly renderer: CanvasRenderer
   readonly input: InputHandler
   readonly missions: MissionManager
+  readonly quality: QualityMonitor
 
   private _episode: EpisodeDefinition | null = null
   private _physicsState: PhysicsState = {}
@@ -58,6 +60,7 @@ export class SimulationEngine implements SimulationEngineInterface, Subscribable
     this.renderer = new CanvasRenderer()
     this.input = new InputHandler()
     this.missions = new MissionManager()
+    this.quality = new QualityMonitor()
 
     this.input.setRenderer(this.renderer)
     this._snapshot = this._buildSnapshot()
@@ -182,6 +185,7 @@ export class SimulationEngine implements SimulationEngineInterface, Subscribable
     this._accumulator = 0
     this._frameTimes = []
     this._fps = 0
+    this.quality.reset()
 
     if (this._episode) {
       this._physicsState = this._episode.createInitialState()
@@ -246,6 +250,9 @@ export class SimulationEngine implements SimulationEngineInterface, Subscribable
 
     // Track FPS
     this._trackFps(wallDelta)
+
+    // Feed quality monitor
+    this.quality.recordFrame(wallDelta)
 
     // Advance time (applies speed multiplier, respects pause)
     const scaledDelta = this.time.advance(wallDelta)

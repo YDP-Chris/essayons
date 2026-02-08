@@ -111,7 +111,7 @@ export function MissionPanel({
       {/* Objectives */}
       <div className="mission-panel__section">
         <h3 className="mission-panel__section-heading">Objectives</h3>
-        <ul className="mission-panel__objectives" role="list">
+        <ul className="mission-panel__objectives">
           {activeMission.objectives.map((obj, idx) => {
             const liveObj = liveObjectives[idx]
             const status: ObjectiveStatus = liveObj?.status ?? 'pending'

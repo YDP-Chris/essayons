@@ -38,6 +38,9 @@ import {
   trackMissionFail,
   setDomainMetadata,
 } from '@/analytics/plausible.ts'
+import { OnboardingTutorial } from '@/features/onboarding/OnboardingTutorial.tsx'
+import type { UseTutorialReturn } from '@/features/onboarding/use-tutorial.ts'
+import { AriaLiveRegion } from '@/shared/accessibility/AriaLiveRegion.tsx'
 import './EpisodeShell.css'
 
 // ---------------------------------------------------------------------------
@@ -46,6 +49,8 @@ import './EpisodeShell.css'
 
 export interface EpisodeShellProps {
   readonly episodeId: string
+  /** Optional tutorial state from useTutorial, rendered when provided. */
+  readonly tutorial?: UseTutorialReturn
 }
 
 // ---------------------------------------------------------------------------
@@ -155,7 +160,7 @@ function domainAccentColor(domain: string): string {
 // Main Component
 // ---------------------------------------------------------------------------
 
-export function EpisodeShell({ episodeId }: EpisodeShellProps) {
+export function EpisodeShell({ episodeId, tutorial }: EpisodeShellProps) {
   const config = getEpisode(episodeId)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [activeMissionIndex, setActiveMissionIndex] = useState(0)
@@ -205,15 +210,16 @@ export function EpisodeShell({ episodeId }: EpisodeShellProps) {
 
     engine.attachCanvas(canvas)
 
-    if (config?.simulationMode === 'continuous') {
-      engine.start()
-    }
+    // Start the render loop for all simulation modes.
+    // Even event-driven and step-based episodes need the rAF loop
+    // running so the canvas renderer draws each frame.
+    engine.start()
 
     return () => {
       engine.stop()
       engine.detachCanvas()
     }
-  }, [engine, config?.simulationMode])
+  }, [engine])
 
   // ---- Subscribe to engine state ----
   const subscribe = useCallback(
@@ -309,6 +315,16 @@ export function EpisodeShell({ episodeId }: EpisodeShellProps) {
     [config, engine],
   )
 
+  // ---- Simulation status message for screen readers ----
+  const simulationStatus = useMemo(() => {
+    const phase = state.missionState.phase
+    if (phase === 'success') return 'Mission completed successfully.'
+    if (phase === 'failed') return 'Mission failed.'
+    if (state.running && !state.paused) return 'Simulation running.'
+    if (state.paused) return 'Simulation paused.'
+    return 'Simulation ready.'
+  }, [state.missionState.phase, state.running, state.paused])
+
   // ---- Render ----
   if (!config) {
     return (
@@ -338,15 +354,15 @@ export function EpisodeShell({ episodeId }: EpisodeShellProps) {
             </>
           )}
           {state.paused || !state.running ? (
-            <Button variant="domain" size="sm" onClick={handlePlay}>
+            <Button variant="domain" size="sm" onClick={handlePlay} aria-label="Play simulation">
               Play
             </Button>
           ) : (
-            <Button variant="domain" size="sm" onClick={handlePause}>
+            <Button variant="domain" size="sm" onClick={handlePause} aria-label="Pause simulation">
               Pause
             </Button>
           )}
-          <Button variant="ghost" size="sm" onClick={handleReset}>
+          <Button variant="ghost" size="sm" onClick={handleReset} aria-label="Reset simulation">
             Reset
           </Button>
         </div>
@@ -359,6 +375,7 @@ export function EpisodeShell({ episodeId }: EpisodeShellProps) {
           <canvas
             ref={canvasRef}
             className="episode-shell__canvas"
+            role="img"
             aria-label={`${config.title} simulation`}
           />
         </div>
@@ -413,6 +430,12 @@ export function EpisodeShell({ episodeId }: EpisodeShellProps) {
           </aside>
         )}
       </div>
+
+      {/* Onboarding tutorial overlay */}
+      {tutorial && <OnboardingTutorial tutorial={tutorial} />}
+
+      {/* Screen reader announcements for simulation status */}
+      <AriaLiveRegion message={simulationStatus} />
     </div>
   )
 }

@@ -520,7 +520,7 @@ describe('Bridge Lab Physics', () => {
     it('should have valid parameter ranges', () => {
       const loadParam = bridgeLabConfig.parameters.find((p) => p.id === 'load-weight')
       expect(loadParam?.min).toBe(100)
-      expect(loadParam?.max).toBe(10000)
+      expect(loadParam?.max).toBe(100000)
       expect(loadParam?.default).toBe(1000)
     })
   })

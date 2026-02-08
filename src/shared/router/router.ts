@@ -29,6 +29,11 @@ function parseRoute(hash: string): RouteMatch {
     return { route: 'landing', params: {} }
   }
 
+  // Match /teach
+  if (normalized === '/teach') {
+    return { route: 'teach', params: {} }
+  }
+
   // Match /episode/:id
   const episodeMatch = normalized.match(/^\/episode\/([^/]+)$/)
   if (episodeMatch && episodeMatch[1]) {
