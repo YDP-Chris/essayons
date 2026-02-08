@@ -23,6 +23,7 @@ import type {
   PhysicsState,
 } from '@/engine/types.ts'
 import { SimulationEngine } from '@/engine/SimulationEngine.ts'
+import { SPEED_PRESETS } from '@/engine/TimeController.ts'
 import { getEpisode, getEpisodeDefinition } from './registry.ts'
 import { ParameterPanel } from './ParameterPanel.tsx'
 import { MissionPanel } from './MissionPanel.tsx'
@@ -312,6 +313,14 @@ export function EpisodeShell({ episodeId, tutorial }: EpisodeShellProps) {
     trackSimulationInteraction('reset', config.id)
   }, [engine, config])
 
+  const handleSpeedChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      if (!engine) return
+      engine.time.setSpeed(Number(e.target.value))
+    },
+    [engine],
+  )
+
   const handleSelectMission = useCallback(
     (index: number) => {
       if (!config) return
@@ -390,6 +399,18 @@ export function EpisodeShell({ episodeId, tutorial }: EpisodeShellProps) {
           >
             {t('simulation.reset')}
           </Button>
+          <select
+            className="episode-shell__speed"
+            value={state.speedMultiplier}
+            onChange={handleSpeedChange}
+            aria-label={t('simulation.speed')}
+          >
+            {SPEED_PRESETS.map((s) => (
+              <option key={s} value={s}>
+                {s}x
+              </option>
+            ))}
+          </select>
         </div>
       </header>
 

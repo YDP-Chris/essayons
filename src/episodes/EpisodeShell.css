@@ -57,6 +57,23 @@
   align-items: center;
 }
 
+.episode-shell__speed {
+  appearance: none;
+  background: var(--color-surface, #1a1a2e);
+  color: var(--color-text, #e2e8f0);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-sm, 4px);
+  padding: var(--space-1, 4px) var(--space-2, 8px);
+  font-size: 0.75rem;
+  font-family: monospace;
+  cursor: pointer;
+}
+
+.episode-shell__speed:focus-visible {
+  outline: 2px solid var(--color-primary, #00d4aa);
+  outline-offset: 2px;
+}
+
 /* Main grid — 3-column layout: canvas + sidebar + reference */
 
 .episode-shell__grid {

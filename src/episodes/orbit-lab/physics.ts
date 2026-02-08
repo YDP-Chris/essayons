@@ -64,7 +64,6 @@ export interface OrbitalParams {
   readonly 'planet-mass': number
   readonly 'launch-speed': number
   readonly 'launch-angle': number
-  readonly 'orbit-altitude': number
   readonly 'show-trail': boolean
   readonly 'show-vectors': boolean
 }
@@ -108,27 +107,26 @@ function gravitationalAcceleration(
 /**
  * Create an initial orbital state from user-controlled parameters.
  *
- * The satellite is placed at `orbit-altitude` above the planet surface
- * on the positive x-axis, with velocity directed according to `launch-angle`.
+ * The satellite launches from the planet surface. Launch angle 0° fires
+ * straight up (radially outward). The angle rotates from radial, so 90°
+ * fires tangentially — the direction needed for orbit.
  */
 export function createInitialState(params: Record<string, unknown>): OrbitalState {
   const planetMass = (params['planet-mass'] as number | undefined) ?? 5.972e24
   const launchSpeed = (params['launch-speed'] as number | undefined) ?? 7500
   const launchAngleDeg = (params['launch-angle'] as number | undefined) ?? 0
-  const orbitAltitude = (params['orbit-altitude'] as number | undefined) ?? 400000
 
   const planetRadius = EARTH_RADIUS
-  const orbitalRadius = planetRadius + orbitAltitude
 
-  // Satellite starts on the positive x-axis at the orbital radius
-  const satX = orbitalRadius
+  // Satellite starts on the planet surface (positive x-axis, just above the radius)
+  const satX = planetRadius + 1000 // 1km above surface to avoid immediate collision
   const satY = 0
 
-  // Convert launch angle to radians. 0 degrees = tangential (positive y direction)
-  // The angle rotates from the tangent direction.
+  // Convert launch angle to radians. 0° = radially outward (+x direction)
+  // 90° = tangential (prograde, +y direction) — this is what you need for orbit
   const angleRad = (launchAngleDeg * Math.PI) / 180
-  const vx = launchSpeed * Math.sin(angleRad) * -1
-  const vy = launchSpeed * Math.cos(angleRad)
+  const vx = launchSpeed * Math.cos(angleRad)
+  const vy = launchSpeed * Math.sin(angleRad)
 
   return {
     satellite: { x: satX, y: satY, vx, vy },

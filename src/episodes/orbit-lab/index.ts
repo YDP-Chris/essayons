@@ -121,8 +121,7 @@ export const orbitLabDefinition: EpisodeDefinition = {
     return createInitialState({
       'planet-mass': 5.972e24,
       'launch-speed': 7500,
-      'launch-angle': 0,
-      'orbit-altitude': 400000,
+      'launch-angle': 80,
     }) as unknown as PhysicsState
   },
 

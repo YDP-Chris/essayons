@@ -30,8 +30,7 @@ import { validateConfig } from '../validate-config.ts'
 const defaultParams: Record<string, unknown> = {
   'planet-mass': 5.972e24,
   'launch-speed': 7500,
-  'launch-angle': 0,
-  'orbit-altitude': 400000,
+  'launch-angle': 80,
   'show-trail': true,
   'show-vectors': false,
 }
@@ -81,9 +80,9 @@ describe('Orbit Lab Physics', () => {
       expect(state.simTime).toBe(0)
     })
 
-    it('should place the satellite at the correct orbital radius', () => {
+    it('should place the satellite at the planet surface', () => {
       const state = createInitialState(defaultParams)
-      const expectedRadius = EARTH_RADIUS + 400000
+      const expectedRadius = EARTH_RADIUS + 1000 // 1km above surface
 
       const actualRadius = Math.sqrt(state.satellite.x ** 2 + state.satellite.y ** 2)
       expect(actualRadius).toBeCloseTo(expectedRadius, 0)
@@ -107,21 +106,25 @@ describe('Orbit Lab Physics', () => {
       expect(state.trail[0]?.x).toBeCloseTo(state.satellite.x, 0)
     })
 
-    it('should use custom parameters when provided', () => {
-      const params = { ...defaultParams, 'orbit-altitude': 1000000 }
-      const state = createInitialState(params)
-      const expectedRadius = EARTH_RADIUS + 1000000
-
+    it('should start near the planet surface', () => {
+      const state = createInitialState(defaultParams)
       const actualRadius = Math.sqrt(state.satellite.x ** 2 + state.satellite.y ** 2)
-      expect(actualRadius).toBeCloseTo(expectedRadius, 0)
+      // Should be just above the surface (planet radius + 1km)
+      expect(actualRadius).toBeCloseTo(EARTH_RADIUS + 1000, 0)
     })
 
     it('should apply launch angle to velocity direction', () => {
+      // At 0°, velocity is radially outward (+x, ~0 y)
+      const params0 = { ...defaultParams, 'launch-angle': 0 }
+      const state0 = createInitialState(params0)
+      expect(state0.satellite.vx).toBeGreaterThan(5000)
+      expect(Math.abs(state0.satellite.vy)).toBeLessThan(1)
+
+      // At 90°, velocity is tangential (+y, ~0 x)
       const params90 = { ...defaultParams, 'launch-angle': 90 }
       const state90 = createInitialState(params90)
-
-      // At 90 degrees, velocity should have significant negative x component
-      expect(Math.abs(state90.satellite.vx)).toBeGreaterThan(5000)
+      expect(state90.satellite.vy).toBeGreaterThan(5000)
+      expect(Math.abs(state90.satellite.vx)).toBeLessThan(1)
     })
 
     it('should set planet mass from parameters', () => {
@@ -325,8 +328,8 @@ describe('Orbit Lab Physics', () => {
 
   describe('orbit completion', () => {
     it('should complete one orbit with correct velocity after enough time', () => {
-      const altitude = 400000
-      const r = EARTH_RADIUS + altitude
+      // Launch from surface tangentially (90°) at circular velocity for surface altitude
+      const r = EARTH_RADIUS + 1000 // surface launch position
       const M = 5.972e24
       const vCircular = Math.sqrt((G * M) / r)
 
@@ -336,6 +339,7 @@ describe('Orbit Lab Physics', () => {
       const params = {
         ...defaultParams,
         'launch-speed': vCircular,
+        'launch-angle': 90, // tangential — needed for circular orbit
         'show-trail': false,
       }
       const state = createInitialState(params)
@@ -562,8 +566,8 @@ describe('Orbit Lab Config', () => {
     expect(orbitLabConfig.simulationMode).toBe('continuous')
   })
 
-  it('should have 6 parameters', () => {
-    expect(orbitLabConfig.parameters).toHaveLength(6)
+  it('should have 5 parameters', () => {
+    expect(orbitLabConfig.parameters).toHaveLength(5)
   })
 
   it('should have 3 equations', () => {

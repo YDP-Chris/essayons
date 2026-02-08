@@ -87,6 +87,7 @@ export const en: StringCatalog = {
     playSimulation: 'Play simulation',
     pauseSimulation: 'Pause simulation',
     resetSimulation: 'Reset simulation',
+    speed: 'Simulation speed',
     episodeNotFound: 'Episode not found: {id}',
     missionCompleted: 'Mission completed successfully.',
     missionFailed: 'Mission failed.',
