@@ -1,0 +1,109 @@
+/* Button Component Styles */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  min-width: 44px;
+  padding: var(--space-2) var(--space-5);
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    box-shadow var(--transition-fast);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Primary variant — spark orange */
+.btn-primary {
+  background-color: var(--spark);
+  color: var(--cream);
+  border-color: var(--spark);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--spark) 85%, var(--ink));
+  border-color: color-mix(in srgb, var(--spark) 85%, var(--ink));
+}
+
+.btn-primary:active:not(:disabled) {
+  background-color: color-mix(in srgb, var(--spark) 70%, var(--ink));
+}
+
+/* Secondary variant — outlined */
+.btn-secondary {
+  background-color: transparent;
+  color: var(--ink);
+  border-color: var(--stone);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--paper);
+  border-color: var(--slate);
+}
+
+.btn-secondary:active:not(:disabled) {
+  background-color: color-mix(in srgb, var(--stone) 20%, var(--paper));
+}
+
+/* Ghost variant — no border */
+.btn-ghost {
+  background-color: transparent;
+  color: var(--slate);
+  border-color: transparent;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--stone) 15%, var(--paper));
+  color: var(--ink);
+}
+
+.btn-ghost:active:not(:disabled) {
+  background-color: color-mix(in srgb, var(--stone) 25%, var(--paper));
+}
+
+/* Domain-themed variant — uses accent color */
+.btn-domain {
+  background-color: var(--domain-accent);
+  color: var(--ink);
+  border-color: var(--domain-accent);
+}
+
+.btn-domain:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--domain-accent) 85%, var(--ink));
+  border-color: color-mix(in srgb, var(--domain-accent) 85%, var(--ink));
+}
+
+.btn-domain:active:not(:disabled) {
+  background-color: color-mix(in srgb, var(--domain-accent) 70%, var(--ink));
+}
+
+/* Size variants */
+.btn-sm {
+  min-height: 44px;
+  padding: var(--space-1) var(--space-3);
+  font-size: 0.8125rem;
+}
+
+.btn-lg {
+  min-height: 52px;
+  padding: var(--space-3) var(--space-6);
+  font-size: 1rem;
+}

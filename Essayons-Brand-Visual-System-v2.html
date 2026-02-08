@@ -1,0 +1,1977 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Essayons — Brand Visual System v2</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        /* Core Palette - Domain Agnostic */
+        --ink: #1a1a2e;
+        --graphite: #2d2d44;
+        --slate: #4a4a68;
+        --stone: #8e8ea0;
+        --paper: #f7f6f3;
+        --cream: #fffef9;
+
+        /* Accent - The "Try" Colors */
+        --spark: #ff6b35; /* Primary action - the spark of trying */
+        --growth: #2ec4b6; /* Success, progress */
+        --think: #7b68ee; /* Thinking, processing */
+        --warm: #ffb800; /* Highlights, attention */
+
+        /* Domain Accent Colors */
+        --physics: #00d4aa;
+        --civics: #e63946;
+        --economics: #2a9d8f;
+        --history: #e9c46a;
+        --biology: #8ac926;
+        --engineering: #ff6b35;
+
+        /* Typography */
+        --font-display: 'Instrument Serif', Georgia, serif;
+        --font-body: 'DM Sans', system-ui, sans-serif;
+        --font-mono: 'IBM Plex Mono', monospace;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        font-family: var(--font-body);
+        background: var(--paper);
+        color: var(--ink);
+        line-height: 1.6;
+        overflow-x: hidden;
+      }
+
+      /* Subtle grid texture */
+      .texture-bg {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: radial-gradient(circle at 1px 1px, var(--stone) 1px, transparent 0);
+        background-size: 32px 32px;
+        opacity: 0.07;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      /* Navigation */
+      nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        background: linear-gradient(180deg, var(--paper) 60%, transparent 100%);
+        padding: 1.5rem 3rem;
+      }
+
+      nav ul {
+        display: flex;
+        gap: 2.5rem;
+        list-style: none;
+        justify-content: center;
+      }
+
+      nav a {
+        color: var(--slate);
+        text-decoration: none;
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        transition: color 0.3s ease;
+      }
+
+      nav a:hover {
+        color: var(--spark);
+      }
+
+      /* Sections */
+      section {
+        position: relative;
+        z-index: 1;
+        min-height: 100vh;
+        padding: 8rem 4rem 4rem;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      .full-bleed {
+        max-width: none;
+        padding-left: 0;
+        padding-right: 0;
+      }
+
+      .section-label {
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        font-weight: 500;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--spark);
+        margin-bottom: 0.75rem;
+      }
+
+      h1 {
+        font-family: var(--font-display);
+        font-size: clamp(3.5rem, 10vw, 7rem);
+        font-weight: 400;
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+      }
+
+      h2 {
+        font-family: var(--font-display);
+        font-size: clamp(2.5rem, 5vw, 4rem);
+        font-weight: 400;
+        margin-bottom: 1.5rem;
+        line-height: 1.1;
+      }
+
+      h3 {
+        font-family: var(--font-body);
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+        color: var(--graphite);
+      }
+
+      p {
+        color: var(--slate);
+        max-width: 55ch;
+        font-size: 1.1rem;
+      }
+
+      /* Hero Section */
+      .hero {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 100vh;
+        padding-top: 0;
+      }
+
+      .hero-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4rem;
+        align-items: center;
+      }
+
+      .hero h1 em {
+        font-style: italic;
+        color: var(--spark);
+      }
+
+      .hero-tagline {
+        font-family: var(--font-display);
+        font-size: 1.5rem;
+        font-style: italic;
+        color: var(--slate);
+        margin-top: 1.5rem;
+      }
+
+      .hero p {
+        margin-top: 1.5rem;
+        font-size: 1.15rem;
+      }
+
+      .hero-visual {
+        position: relative;
+        height: 500px;
+      }
+
+      /* Domain Circles Animation */
+      .domain-orbit {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+      }
+
+      .center-logo {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 120px;
+        height: 120px;
+        background: var(--ink);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        box-shadow: 0 8px 32px rgba(26, 26, 46, 0.3);
+      }
+
+      .center-logo span {
+        font-family: var(--font-display);
+        font-size: 2.5rem;
+        color: var(--cream);
+        font-style: italic;
+      }
+
+      .orbit-ring {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        border: 1px dashed var(--stone);
+        border-radius: 50%;
+        opacity: 0.4;
+      }
+
+      .orbit-ring.ring-1 {
+        width: 220px;
+        height: 220px;
+        margin: -110px 0 0 -110px;
+        animation: spin 30s linear infinite;
+      }
+
+      .orbit-ring.ring-2 {
+        width: 320px;
+        height: 320px;
+        margin: -160px 0 0 -160px;
+        animation: spin 45s linear infinite reverse;
+      }
+
+      .orbit-ring.ring-3 {
+        width: 420px;
+        height: 420px;
+        margin: -210px 0 0 -210px;
+        animation: spin 60s linear infinite;
+      }
+
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .domain-node {
+        position: absolute;
+        width: 56px;
+        height: 56px;
+        background: var(--cream);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        border: 2px solid transparent;
+        transition: all 0.3s ease;
+      }
+
+      .domain-node:hover {
+        transform: scale(1.15);
+      }
+
+      .domain-node.physics {
+        top: -28px;
+        left: 50%;
+        margin-left: -28px;
+        border-color: var(--physics);
+      }
+      .domain-node.civics {
+        top: 50%;
+        right: -28px;
+        margin-top: -28px;
+        border-color: var(--civics);
+      }
+      .domain-node.economics {
+        bottom: -28px;
+        left: 50%;
+        margin-left: -28px;
+        border-color: var(--economics);
+      }
+      .domain-node.history {
+        top: 50%;
+        left: -28px;
+        margin-top: -28px;
+        border-color: var(--history);
+      }
+      .domain-node.biology {
+        top: 15%;
+        right: 5%;
+        border-color: var(--biology);
+      }
+      .domain-node.engineering {
+        bottom: 15%;
+        left: 5%;
+        border-color: var(--engineering);
+      }
+
+      /* CTA Buttons */
+      .cta-row {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2.5rem;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1rem 2rem;
+        font-family: var(--font-body);
+        font-size: 0.95rem;
+        font-weight: 600;
+        text-decoration: none;
+        border-radius: 100px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        border: none;
+      }
+
+      .btn-primary {
+        background: var(--spark);
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: #e55a2b;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(255, 107, 53, 0.35);
+      }
+
+      .btn-secondary {
+        background: transparent;
+        color: var(--ink);
+        border: 2px solid var(--stone);
+      }
+
+      .btn-secondary:hover {
+        border-color: var(--ink);
+        background: var(--ink);
+        color: var(--cream);
+      }
+
+      /* Brand Philosophy Section */
+      .philosophy-section {
+        background: var(--ink);
+        color: var(--cream);
+        padding: 6rem 4rem;
+      }
+
+      .philosophy-section .section-label {
+        color: var(--warm);
+      }
+
+      .philosophy-section h2 {
+        color: var(--cream);
+      }
+
+      .philosophy-section p {
+        color: var(--stone);
+      }
+
+      .philosophy-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 3rem;
+        margin-top: 4rem;
+      }
+
+      .philosophy-card {
+        padding: 2rem;
+        border-left: 3px solid var(--spark);
+      }
+
+      .philosophy-card h3 {
+        color: var(--cream);
+        font-size: 1.25rem;
+        margin-bottom: 1rem;
+      }
+
+      .philosophy-card p {
+        font-size: 1rem;
+        line-height: 1.7;
+      }
+
+      /* Logo Section */
+      .logo-section {
+        background: var(--cream);
+      }
+
+      .logo-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 2rem;
+        margin-top: 3rem;
+      }
+
+      .logo-card {
+        background: white;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 16px;
+        padding: 3rem 2rem;
+        text-align: center;
+        transition: all 0.3s ease;
+      }
+
+      .logo-card:hover {
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+        transform: translateY(-4px);
+      }
+
+      .logo-card.dark-bg {
+        background: var(--ink);
+      }
+
+      .logo-display {
+        height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1.5rem;
+      }
+
+      .logo-card h4 {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--slate);
+        margin-top: 0.5rem;
+      }
+
+      .logo-card.dark-bg h4 {
+        color: var(--stone);
+      }
+
+      /* Wordmark Styles */
+      .wordmark {
+        font-family: var(--font-display);
+        font-size: 2.5rem;
+        letter-spacing: 0.01em;
+      }
+
+      .wordmark-dark {
+        color: var(--ink);
+      }
+      .wordmark-light {
+        color: var(--cream);
+      }
+
+      .wordmark em {
+        font-style: italic;
+      }
+
+      /* Logomark */
+      .logomark {
+        width: 64px;
+        height: 64px;
+        background: var(--ink);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .logomark span {
+        font-family: var(--font-display);
+        font-size: 2rem;
+        color: var(--cream);
+        font-style: italic;
+      }
+
+      .logomark.light {
+        background: var(--cream);
+        border: 2px solid var(--ink);
+      }
+
+      .logomark.light span {
+        color: var(--ink);
+      }
+
+      /* Color Palette */
+      .color-section {
+        background: white;
+      }
+
+      .palette-group {
+        margin-top: 3rem;
+      }
+
+      .palette-group h3 {
+        margin-bottom: 1.5rem;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--slate);
+      }
+
+      .palette-row {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+
+      .color-chip {
+        flex: 1;
+        min-width: 120px;
+        border-radius: 12px;
+        overflow: hidden;
+        background: white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      }
+
+      .chip-color {
+        height: 80px;
+      }
+
+      .chip-info {
+        padding: 1rem;
+      }
+
+      .chip-name {
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 0.25rem;
+      }
+
+      .chip-hex {
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        color: var(--slate);
+      }
+
+      /* Domain Colors */
+      .domain-colors {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 1rem;
+        margin-top: 2rem;
+      }
+
+      .domain-color {
+        text-align: center;
+      }
+
+      .domain-swatch {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        margin: 0 auto 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+      }
+
+      .domain-color span {
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--slate);
+      }
+
+      /* Typography Section */
+      .type-section {
+        background: var(--paper);
+      }
+
+      .type-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4rem;
+        margin-top: 3rem;
+      }
+
+      .type-family {
+        background: white;
+        border-radius: 16px;
+        padding: 2.5rem;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+      }
+
+      .type-family-name {
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        color: var(--spark);
+        margin-bottom: 1.5rem;
+      }
+
+      .type-specimen {
+        margin-bottom: 1.5rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+      }
+
+      .type-specimen:last-child {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+      }
+
+      .type-label {
+        font-family: var(--font-mono);
+        font-size: 0.65rem;
+        color: var(--stone);
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+
+      .display-serif {
+        font-family: var(--font-display);
+        font-size: 3.5rem;
+        line-height: 1.1;
+      }
+
+      .heading-serif {
+        font-family: var(--font-display);
+        font-size: 2rem;
+        line-height: 1.2;
+      }
+
+      .quote-serif {
+        font-family: var(--font-display);
+        font-size: 1.5rem;
+        font-style: italic;
+        line-height: 1.4;
+        color: var(--slate);
+      }
+
+      .body-sans {
+        font-family: var(--font-body);
+        font-size: 1.1rem;
+        line-height: 1.7;
+        color: var(--slate);
+      }
+
+      .ui-sans {
+        font-family: var(--font-body);
+        font-size: 0.9rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+      }
+
+      .data-mono {
+        font-family: var(--font-mono);
+        font-size: 1rem;
+        color: var(--growth);
+      }
+
+      .label-mono {
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--slate);
+      }
+
+      /* Episode Branding */
+      .episodes-section {
+        background: var(--ink);
+        color: var(--cream);
+        padding: 6rem 4rem;
+      }
+
+      .episodes-section .section-label {
+        color: var(--warm);
+      }
+
+      .episodes-section h2 {
+        color: var(--cream);
+      }
+
+      .episodes-section > p {
+        color: var(--stone);
+      }
+
+      .episodes-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2rem;
+        margin-top: 3rem;
+      }
+
+      .episode-card {
+        background: var(--graphite);
+        border-radius: 16px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        cursor: pointer;
+      }
+
+      .episode-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+      }
+
+      .episode-visual {
+        height: 180px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .episode-visual::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        opacity: 0.15;
+      }
+
+      .episode-card.physics .episode-visual {
+        background: linear-gradient(135deg, #00d4aa22, #00d4aa44);
+      }
+      .episode-card.civics .episode-visual {
+        background: linear-gradient(135deg, #e6394622, #e6394644);
+      }
+      .episode-card.economics .episode-visual {
+        background: linear-gradient(135deg, #2a9d8f22, #2a9d8f44);
+      }
+      .episode-card.history .episode-visual {
+        background: linear-gradient(135deg, #e9c46a22, #e9c46a44);
+      }
+      .episode-card.biology .episode-visual {
+        background: linear-gradient(135deg, #8ac92622, #8ac92644);
+      }
+      .episode-card.engineering .episode-visual {
+        background: linear-gradient(135deg, #ff6b3522, #ff6b3544);
+      }
+
+      .episode-icon {
+        width: 80px;
+        height: 80px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5rem;
+      }
+
+      .episode-info {
+        padding: 1.75rem;
+      }
+
+      .episode-domain {
+        font-family: var(--font-mono);
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        margin-bottom: 0.75rem;
+      }
+
+      .episode-card.physics .episode-domain {
+        color: var(--physics);
+      }
+      .episode-card.civics .episode-domain {
+        color: var(--civics);
+      }
+      .episode-card.economics .episode-domain {
+        color: var(--economics);
+      }
+      .episode-card.history .episode-domain {
+        color: var(--history);
+      }
+      .episode-card.biology .episode-domain {
+        color: var(--biology);
+      }
+      .episode-card.engineering .episode-domain {
+        color: var(--engineering);
+      }
+
+      .episode-title {
+        font-family: var(--font-display);
+        font-size: 1.75rem;
+        color: var(--cream);
+        margin-bottom: 0.25rem;
+      }
+
+      .episode-by {
+        font-size: 0.8rem;
+        color: var(--stone);
+        margin-bottom: 1rem;
+      }
+
+      .episode-desc {
+        font-size: 0.9rem;
+        color: var(--stone);
+        line-height: 1.6;
+      }
+
+      .episode-status {
+        display: inline-block;
+        padding: 0.35rem 0.85rem;
+        border-radius: 100px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-top: 1rem;
+      }
+
+      .status-live {
+        background: var(--growth);
+        color: var(--ink);
+      }
+
+      .status-soon {
+        background: var(--slate);
+        color: var(--cream);
+      }
+
+      /* UI Mockup Section */
+      .mockup-section {
+        background: var(--paper);
+        padding: 6rem 4rem;
+      }
+
+      .mockup-tabs {
+        display: flex;
+        gap: 1rem;
+        margin: 2rem 0;
+      }
+
+      .mockup-tab {
+        padding: 0.75rem 1.5rem;
+        background: transparent;
+        border: 2px solid var(--stone);
+        border-radius: 100px;
+        font-family: var(--font-body);
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--slate);
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .mockup-tab:hover,
+      .mockup-tab.active {
+        background: var(--ink);
+        border-color: var(--ink);
+        color: var(--cream);
+      }
+
+      .browser-frame {
+        background: white;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12);
+      }
+
+      .browser-bar {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1rem 1.5rem;
+        background: var(--paper);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+      }
+
+      .browser-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+      }
+
+      .browser-dot.red {
+        background: #ff5f56;
+      }
+      .browser-dot.yellow {
+        background: #ffbd2e;
+      }
+      .browser-dot.green {
+        background: #27ca40;
+      }
+
+      .browser-url {
+        flex: 1;
+        margin-left: 1rem;
+        padding: 0.5rem 1rem;
+        background: white;
+        border-radius: 8px;
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        color: var(--slate);
+      }
+
+      .browser-content {
+        padding: 0;
+      }
+
+      /* Landing Page Mockup */
+      .landing-mockup {
+        background: var(--cream);
+      }
+
+      .landing-hero {
+        padding: 4rem 3rem;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 3rem;
+        align-items: center;
+      }
+
+      .landing-hero h1 {
+        font-family: var(--font-display);
+        font-size: 3rem;
+        line-height: 1.1;
+        color: var(--ink);
+      }
+
+      .landing-hero h1 em {
+        color: var(--spark);
+        font-style: italic;
+      }
+
+      .landing-hero p {
+        font-size: 1.1rem;
+        color: var(--slate);
+        margin-top: 1rem;
+      }
+
+      .landing-cta {
+        margin-top: 1.5rem;
+      }
+
+      .landing-visual {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+      }
+
+      .mini-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+        transition: transform 0.3s ease;
+      }
+
+      .mini-card:hover {
+        transform: translateY(-4px);
+      }
+
+      .mini-card-icon {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .mini-card-title {
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 0.25rem;
+      }
+
+      .mini-card-domain {
+        font-family: var(--font-mono);
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+
+      .mini-card.physics .mini-card-domain {
+        color: var(--physics);
+      }
+      .mini-card.civics .mini-card-domain {
+        color: var(--civics);
+      }
+      .mini-card.economics .mini-card-domain {
+        color: var(--economics);
+      }
+      .mini-card.history .mini-card-domain {
+        color: var(--history);
+      }
+
+      /* Simulator Mockup */
+      .sim-mockup {
+        display: none;
+        background: var(--ink);
+      }
+
+      .sim-mockup.active {
+        display: block;
+      }
+
+      .sim-layout {
+        display: grid;
+        grid-template-columns: 1fr 300px;
+        min-height: 450px;
+      }
+
+      .sim-viewport {
+        position: relative;
+        overflow: hidden;
+        background: linear-gradient(180deg, #0d1b2a, #1b263b);
+      }
+
+      /* Animated Pendulum for Physics */
+      .pendulum-demo {
+        position: absolute;
+        top: 30%;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+
+      .pendulum-pivot {
+        width: 8px;
+        height: 8px;
+        background: var(--stone);
+        border-radius: 50%;
+        margin: 0 auto;
+      }
+
+      .pendulum-arm {
+        width: 2px;
+        height: 120px;
+        background: var(--stone);
+        margin: 0 auto;
+        transform-origin: top center;
+        animation: swing 2s ease-in-out infinite;
+      }
+
+      .pendulum-bob {
+        width: 40px;
+        height: 40px;
+        background: var(--spark);
+        border-radius: 50%;
+        margin: -2px auto 0;
+        box-shadow: 0 4px 20px rgba(255, 107, 53, 0.4);
+      }
+
+      @keyframes swing {
+        0%,
+        100% {
+          transform: rotate(30deg);
+        }
+        50% {
+          transform: rotate(-30deg);
+        }
+      }
+
+      .sim-sidebar {
+        background: var(--graphite);
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .sim-panel {
+        background: var(--ink);
+        border-radius: 12px;
+        padding: 1.25rem;
+      }
+
+      .panel-header {
+        font-family: var(--font-mono);
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--spark);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .panel-header::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        background: var(--spark);
+        border-radius: 2px;
+      }
+
+      .control-row {
+        margin-bottom: 1rem;
+      }
+
+      .control-row:last-child {
+        margin-bottom: 0;
+      }
+
+      .control-label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.75rem;
+        color: var(--stone);
+        margin-bottom: 0.5rem;
+      }
+
+      .control-value {
+        font-family: var(--font-mono);
+        color: var(--growth);
+      }
+
+      .control-slider {
+        width: 100%;
+        height: 4px;
+        background: var(--graphite);
+        border-radius: 2px;
+        appearance: none;
+        cursor: pointer;
+      }
+
+      .control-slider::-webkit-slider-thumb {
+        appearance: none;
+        width: 14px;
+        height: 14px;
+        background: var(--spark);
+        border-radius: 50%;
+        cursor: pointer;
+      }
+
+      .data-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+      }
+
+      .data-item {
+        background: var(--graphite);
+        padding: 0.75rem;
+        border-radius: 8px;
+      }
+
+      .data-label {
+        font-family: var(--font-mono);
+        font-size: 0.6rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--stone);
+      }
+
+      .data-value {
+        font-family: var(--font-mono);
+        font-size: 1rem;
+        color: var(--cream);
+        margin-top: 0.25rem;
+      }
+
+      /* Component Library */
+      .components-section {
+        background: white;
+      }
+
+      .component-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2rem;
+        margin-top: 3rem;
+      }
+
+      .component-box {
+        background: var(--paper);
+        border-radius: 16px;
+        padding: 2rem;
+      }
+
+      .component-box h4 {
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--slate);
+        margin-bottom: 1.5rem;
+      }
+
+      .btn-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+      }
+
+      .btn-sm {
+        padding: 0.6rem 1.25rem;
+        font-size: 0.85rem;
+      }
+
+      .btn-ghost {
+        background: transparent;
+        color: var(--slate);
+        border: none;
+        padding: 0.6rem 1rem;
+      }
+
+      .btn-ghost:hover {
+        color: var(--spark);
+      }
+
+      /* Input */
+      .input-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .input-field {
+        padding: 0.85rem 1rem;
+        border: 2px solid rgba(0, 0, 0, 0.08);
+        border-radius: 10px;
+        font-family: var(--font-body);
+        font-size: 0.9rem;
+        background: white;
+        transition: border-color 0.3s ease;
+      }
+
+      .input-field:focus {
+        outline: none;
+        border-color: var(--spark);
+      }
+
+      .input-field::placeholder {
+        color: var(--stone);
+      }
+
+      /* Badges */
+      .badge-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.4rem 0.9rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border-radius: 100px;
+      }
+
+      .badge-success {
+        background: rgba(46, 196, 182, 0.15);
+        color: #1a9e92;
+      }
+
+      .badge-warning {
+        background: rgba(255, 184, 0, 0.15);
+        color: #cc9300;
+      }
+
+      .badge-error {
+        background: rgba(255, 107, 53, 0.15);
+        color: #e55a2b;
+      }
+
+      .badge-neutral {
+        background: rgba(0, 0, 0, 0.06);
+        color: var(--slate);
+      }
+
+      /* Footer */
+      footer {
+        background: var(--ink);
+        color: var(--cream);
+        padding: 5rem 4rem;
+        text-align: center;
+      }
+
+      .footer-logo {
+        font-family: var(--font-display);
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .footer-tagline {
+        font-family: var(--font-display);
+        font-size: 1.25rem;
+        font-style: italic;
+        color: var(--stone);
+      }
+
+      .footer-meta {
+        margin-top: 3rem;
+        font-size: 0.85rem;
+        color: var(--slate);
+      }
+
+      /* Responsive */
+      @media (max-width: 1024px) {
+        .hero-content,
+        .type-grid,
+        .landing-hero,
+        .sim-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .hero-visual {
+          height: 400px;
+        }
+
+        .philosophy-grid,
+        .logo-grid,
+        .episodes-grid,
+        .component-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .domain-colors {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+
+      @media (max-width: 768px) {
+        section {
+          padding: 6rem 1.5rem 3rem;
+        }
+
+        nav ul {
+          gap: 1rem;
+          flex-wrap: wrap;
+        }
+
+        nav a {
+          font-size: 0.7rem;
+        }
+
+        .landing-visual {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="texture-bg"></div>
+
+    <nav>
+      <ul>
+        <li><a href="#hero">Home</a></li>
+        <li><a href="#philosophy">Philosophy</a></li>
+        <li><a href="#logos">Identity</a></li>
+        <li><a href="#colors">Colors</a></li>
+        <li><a href="#typography">Type</a></li>
+        <li><a href="#episodes">Episodes</a></li>
+        <li><a href="#mockups">Mockups</a></li>
+      </ul>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="hero" class="hero">
+      <div class="hero-content">
+        <div>
+          <span class="section-label">Brand Identity System v2</span>
+          <h1>Essayons.<br /><em>Let us try.</em></h1>
+          <p class="hero-tagline">"Learn by crashing into things."</p>
+          <p>
+            Interactive simulations that teach physics, civics, economics, history, and more —
+            through hands-on exploration. Real computation. Zero friction.
+          </p>
+          <div class="cta-row">
+            <a href="#mockups" class="btn btn-primary">View UI Mockups</a>
+            <a href="#episodes" class="btn btn-secondary">Explore Episodes</a>
+          </div>
+        </div>
+        <div class="hero-visual">
+          <div class="domain-orbit">
+            <div class="center-logo">
+              <span>E</span>
+            </div>
+            <div class="orbit-ring ring-1">
+              <div class="domain-node physics">🛰️</div>
+              <div class="domain-node civics">🏛️</div>
+            </div>
+            <div class="orbit-ring ring-2">
+              <div class="domain-node economics">📈</div>
+              <div class="domain-node history">📜</div>
+            </div>
+            <div class="orbit-ring ring-3">
+              <div class="domain-node biology">🧬</div>
+              <div class="domain-node engineering">⚙️</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Philosophy Section -->
+    <section id="philosophy" class="philosophy-section full-bleed">
+      <div style="max-width: 1400px; margin: 0 auto; padding: 0 4rem">
+        <span class="section-label">01 — Brand Philosophy</span>
+        <h2>Any domain where doing<br />beats watching.</h2>
+        <p>
+          Essayons isn't a physics simulator. It's a learning philosophy applied across every
+          subject where interactive exploration beats passive consumption.
+        </p>
+
+        <div class="philosophy-grid">
+          <div class="philosophy-card">
+            <h3>Learn by Doing</h3>
+            <p>
+              A student who crashes a democracy simulation twenty times understands checks and
+              balances better than one who memorized the Constitution.
+            </p>
+          </div>
+          <div class="philosophy-card">
+            <h3>Real, Not Fake</h3>
+            <p>
+              Actual computation. Whether it's orbital mechanics or market dynamics, the math is
+              real. No animations pretending to be simulations.
+            </p>
+          </div>
+          <div class="philosophy-card">
+            <h3>Zero Friction</h3>
+            <p>
+              No accounts. No downloads. No installation. A teacher shares a link, thirty students
+              are learning in seconds. That's the only way it works.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Logo Section -->
+    <section id="logos" class="logo-section">
+      <span class="section-label">02 — Logo System</span>
+      <h2>Flexible identity for<br />any domain.</h2>
+      <p>
+        The Essayons mark uses a serif italic "E" — elegant enough for history, bold enough for
+        engineering. The full wordmark balances scholarly authority with approachable warmth.
+      </p>
+
+      <div class="logo-grid">
+        <div class="logo-card">
+          <div class="logo-display">
+            <span class="wordmark wordmark-dark"><em>E</em>ssayons</span>
+          </div>
+          <h4>Primary Wordmark</h4>
+        </div>
+
+        <div class="logo-card dark-bg">
+          <div class="logo-display">
+            <span class="wordmark wordmark-light"><em>E</em>ssayons</span>
+          </div>
+          <h4>Reversed</h4>
+        </div>
+
+        <div class="logo-card">
+          <div class="logo-display">
+            <div class="logomark">
+              <span>E</span>
+            </div>
+          </div>
+          <h4>Logomark</h4>
+        </div>
+
+        <div class="logo-card">
+          <div class="logo-display">
+            <div class="logomark light">
+              <span>E</span>
+            </div>
+          </div>
+          <h4>Logomark Light</h4>
+        </div>
+      </div>
+    </section>
+
+    <!-- Color Section -->
+    <section id="colors" class="color-section">
+      <span class="section-label">03 — Color System</span>
+      <h2>Domain-agnostic core.<br />Subject-specific accents.</h2>
+      <p>
+        The neutral core palette works for any subject. Each episode gets its own accent color that
+        signals its domain at a glance.
+      </p>
+
+      <div class="palette-group">
+        <h3>Core Palette</h3>
+        <div class="palette-row">
+          <div class="color-chip">
+            <div class="chip-color" style="background: var(--ink)"></div>
+            <div class="chip-info">
+              <div class="chip-name">Ink</div>
+              <div class="chip-hex">#1A1A2E</div>
+            </div>
+          </div>
+          <div class="color-chip">
+            <div class="chip-color" style="background: var(--graphite)"></div>
+            <div class="chip-info">
+              <div class="chip-name">Graphite</div>
+              <div class="chip-hex">#2D2D44</div>
+            </div>
+          </div>
+          <div class="color-chip">
+            <div class="chip-color" style="background: var(--slate)"></div>
+            <div class="chip-info">
+              <div class="chip-name">Slate</div>
+              <div class="chip-hex">#4A4A68</div>
+            </div>
+          </div>
+          <div class="color-chip">
+            <div class="chip-color" style="background: var(--stone)"></div>
+            <div class="chip-info">
+              <div class="chip-name">Stone</div>
+              <div class="chip-hex">#8E8EA0</div>
+            </div>
+          </div>
+          <div class="color-chip">
+            <div class="chip-color" style="background: var(--paper)"></div>
+            <div class="chip-info">
+              <div class="chip-name">Paper</div>
+              <div class="chip-hex">#F7F6F3</div>
+            </div>
+          </div>
+          <div class="color-chip">
+            <div class="chip-color" style="background: var(--cream)"></div>
+            <div class="chip-info">
+              <div class="chip-name">Cream</div>
+              <div class="chip-hex">#FFFEF9</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="palette-group">
+        <h3>Action Colors (Colorblind Safe)</h3>
+        <div class="palette-row">
+          <div class="color-chip">
+            <div class="chip-color" style="background: var(--spark)"></div>
+            <div class="chip-info">
+              <div class="chip-name">Spark</div>
+              <div class="chip-hex">#FF6B35</div>
+            </div>
+          </div>
+          <div class="color-chip">
+            <div class="chip-color" style="background: var(--growth)"></div>
+            <div class="chip-info">
+              <div class="chip-name">Growth</div>
+              <div class="chip-hex">#2EC4B6</div>
+            </div>
+          </div>
+          <div class="color-chip">
+            <div class="chip-color" style="background: var(--warm)"></div>
+            <div class="chip-info">
+              <div class="chip-name">Warm</div>
+              <div class="chip-hex">#FFB800</div>
+            </div>
+          </div>
+          <div class="color-chip">
+            <div class="chip-color" style="background: var(--think)"></div>
+            <div class="chip-info">
+              <div class="chip-name">Think</div>
+              <div class="chip-hex">#7B68EE</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="palette-group">
+        <h3>Domain Accents</h3>
+        <div class="domain-colors">
+          <div class="domain-color">
+            <div class="domain-swatch" style="background: var(--physics)">🛰️</div>
+            <span>Physics</span>
+          </div>
+          <div class="domain-color">
+            <div class="domain-swatch" style="background: var(--civics)">🏛️</div>
+            <span>Civics</span>
+          </div>
+          <div class="domain-color">
+            <div class="domain-swatch" style="background: var(--economics)">📈</div>
+            <span>Economics</span>
+          </div>
+          <div class="domain-color">
+            <div class="domain-swatch" style="background: var(--history)">📜</div>
+            <span>History</span>
+          </div>
+          <div class="domain-color">
+            <div class="domain-swatch" style="background: var(--biology)">🧬</div>
+            <span>Biology</span>
+          </div>
+          <div class="domain-color">
+            <div class="domain-swatch" style="background: var(--engineering)">⚙️</div>
+            <span>Engineering</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Typography Section -->
+    <section id="typography" class="type-section">
+      <span class="section-label">04 — Typography</span>
+      <h2>Scholarly meets<br />approachable.</h2>
+      <p>
+        Instrument Serif brings gravitas and humanity. DM Sans keeps UI clean and legible. IBM Plex
+        Mono handles data with precision.
+      </p>
+
+      <div class="type-grid">
+        <div class="type-family">
+          <div class="type-family-name">Instrument Serif — Display</div>
+          <div class="type-specimen">
+            <div class="type-label">Display / 56px</div>
+            <div class="display-serif"><em>E</em>ssayons</div>
+          </div>
+          <div class="type-specimen">
+            <div class="type-label">Heading / 32px</div>
+            <div class="heading-serif">Learn by crashing into things</div>
+          </div>
+          <div class="type-specimen">
+            <div class="type-label">Quote / 24px Italic</div>
+            <div class="quote-serif">"The physics you play with sticks."</div>
+          </div>
+        </div>
+
+        <div class="type-family">
+          <div class="type-family-name">DM Sans — Body & UI</div>
+          <div class="type-specimen">
+            <div class="type-label">Body / 18px</div>
+            <div class="body-sans">
+              A child who crashes a satellite into Earth twenty times has internalized Kepler's laws
+              more deeply than someone who memorized equations.
+            </div>
+          </div>
+          <div class="type-specimen">
+            <div class="type-label">UI / 14px Semibold</div>
+            <div class="ui-sans">Start Simulation → Adjust Parameters → Observe Results</div>
+          </div>
+        </div>
+
+        <div class="type-family" style="grid-column: span 2">
+          <div class="type-family-name">IBM Plex Mono — Data & Labels</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem">
+            <div class="type-specimen">
+              <div class="type-label">Telemetry / 16px</div>
+              <div class="data-mono">VEL: 7.67 km/s | ALT: 408.2 km | ECC: 0.0012</div>
+            </div>
+            <div class="type-specimen">
+              <div class="type-label">Label / 12px Uppercase</div>
+              <div class="label-mono">Active Mission • Parameters • Telemetry</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Episodes Section -->
+    <section id="episodes" class="episodes-section full-bleed">
+      <div style="max-width: 1400px; margin: 0 auto; padding: 0 4rem">
+        <span class="section-label">05 — Episode Branding</span>
+        <h2>One platform.<br />Infinite domains.</h2>
+        <p>
+          Each episode has its own visual identity and domain accent color while sharing the
+          Essayons design system.
+        </p>
+
+        <div class="episodes-grid">
+          <div class="episode-card physics">
+            <div class="episode-visual">
+              <div class="episode-icon">🛰️</div>
+            </div>
+            <div class="episode-info">
+              <div class="episode-domain">Physics</div>
+              <h3 class="episode-title">Orbit Lab</h3>
+              <p class="episode-by">by Essayons</p>
+              <p class="episode-desc">
+                Crash satellites into Earth until you understand gravity. Real orbital mechanics, no
+                faking it.
+              </p>
+              <span class="episode-status status-live">Available Now</span>
+            </div>
+          </div>
+
+          <div class="episode-card civics">
+            <div class="episode-visual">
+              <div class="episode-icon">🏛️</div>
+            </div>
+            <div class="episode-info">
+              <div class="episode-domain">Civics</div>
+              <h3 class="episode-title">Citizen Lab</h3>
+              <p class="episode-by">by Essayons</p>
+              <p class="episode-desc">
+                Run a democracy. See what breaks. Electoral systems, legislation, checks and
+                balances.
+              </p>
+              <span class="episode-status status-soon">Coming Soon</span>
+            </div>
+          </div>
+
+          <div class="episode-card economics">
+            <div class="episode-visual">
+              <div class="episode-icon">📈</div>
+            </div>
+            <div class="episode-info">
+              <div class="episode-domain">Economics</div>
+              <h3 class="episode-title">Market Lab</h3>
+              <p class="episode-by">by Essayons</p>
+              <p class="episode-desc">
+                Watch supply meet demand. Manipulate prices. Crash markets. Learn equilibrium.
+              </p>
+              <span class="episode-status status-soon">Coming Soon</span>
+            </div>
+          </div>
+
+          <div class="episode-card history">
+            <div class="episode-visual">
+              <div class="episode-icon">📜</div>
+            </div>
+            <div class="episode-info">
+              <div class="episode-domain">History</div>
+              <h3 class="episode-title">History Lab</h3>
+              <p class="episode-by">by Essayons</p>
+              <p class="episode-desc">
+                What if? Explore cause and effect in historical events. Change variables, see
+                consequences.
+              </p>
+              <span class="episode-status status-soon">Coming Soon</span>
+            </div>
+          </div>
+
+          <div class="episode-card biology">
+            <div class="episode-visual">
+              <div class="episode-icon">🧬</div>
+            </div>
+            <div class="episode-info">
+              <div class="episode-domain">Biology</div>
+              <h3 class="episode-title">Gene Lab</h3>
+              <p class="episode-by">by Essayons</p>
+              <p class="episode-desc">
+                Breed generations. Watch traits emerge. Discover inheritance through
+                experimentation.
+              </p>
+              <span class="episode-status status-soon">Coming Soon</span>
+            </div>
+          </div>
+
+          <div class="episode-card engineering">
+            <div class="episode-visual">
+              <div class="episode-icon">⚙️</div>
+            </div>
+            <div class="episode-info">
+              <div class="episode-domain">Engineering</div>
+              <h3 class="episode-title">Bridge Lab</h3>
+              <p class="episode-by">by Essayons</p>
+              <p class="episode-desc">
+                Build structures. Apply loads. Watch them fail. Learn why some designs survive.
+              </p>
+              <span class="episode-status status-soon">Coming Soon</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Mockups Section -->
+    <section id="mockups" class="mockup-section">
+      <span class="section-label">06 — UI Mockups</span>
+      <h2>From landing to learning.</h2>
+      <p>A cohesive experience from discovery to deep exploration.</p>
+
+      <div class="mockup-tabs">
+        <button class="mockup-tab active" onclick="showMockup('landing')">Landing Page</button>
+        <button class="mockup-tab" onclick="showMockup('simulator')">Simulator</button>
+      </div>
+
+      <div id="landing-mockup" class="browser-frame">
+        <div class="browser-bar">
+          <div class="browser-dot red"></div>
+          <div class="browser-dot yellow"></div>
+          <div class="browser-dot green"></div>
+          <div class="browser-url">essayons.app</div>
+        </div>
+        <div class="browser-content landing-mockup">
+          <div class="landing-hero">
+            <div>
+              <h1>Learn by<br /><em>crashing into things.</em></h1>
+              <p>
+                Interactive simulations that teach physics, civics, economics, history, and more —
+                through hands-on exploration.
+              </p>
+              <div class="landing-cta">
+                <a href="#" class="btn btn-primary">Start Exploring →</a>
+              </div>
+            </div>
+            <div class="landing-visual">
+              <div class="mini-card physics">
+                <div class="mini-card-icon">🛰️</div>
+                <div class="mini-card-title">Orbit Lab</div>
+                <div class="mini-card-domain">Physics</div>
+              </div>
+              <div class="mini-card civics">
+                <div class="mini-card-icon">🏛️</div>
+                <div class="mini-card-title">Citizen Lab</div>
+                <div class="mini-card-domain">Civics</div>
+              </div>
+              <div class="mini-card economics">
+                <div class="mini-card-icon">📈</div>
+                <div class="mini-card-title">Market Lab</div>
+                <div class="mini-card-domain">Economics</div>
+              </div>
+              <div class="mini-card history">
+                <div class="mini-card-icon">📜</div>
+                <div class="mini-card-title">History Lab</div>
+                <div class="mini-card-domain">History</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="simulator-mockup" class="browser-frame sim-mockup">
+        <div class="browser-bar">
+          <div class="browser-dot red"></div>
+          <div class="browser-dot yellow"></div>
+          <div class="browser-dot green"></div>
+          <div class="browser-url">essayons.app/orbit-lab</div>
+        </div>
+        <div class="browser-content">
+          <div class="sim-layout">
+            <div class="sim-viewport">
+              <div class="pendulum-demo">
+                <div class="pendulum-pivot"></div>
+                <div class="pendulum-arm">
+                  <div class="pendulum-bob"></div>
+                </div>
+              </div>
+            </div>
+            <div class="sim-sidebar">
+              <div class="sim-panel">
+                <div class="panel-header">Active Mission</div>
+                <h4 style="color: var(--cream); font-size: 1rem; margin-bottom: 0.5rem">
+                  Simple Harmonic Motion
+                </h4>
+                <p style="color: var(--stone); font-size: 0.85rem; line-height: 1.5">
+                  Adjust the pendulum length and observe how period changes.
+                </p>
+              </div>
+
+              <div class="sim-panel">
+                <div class="panel-header">Parameters</div>
+                <div class="control-row">
+                  <div class="control-label">
+                    <span>Length</span>
+                    <span class="control-value">1.2 m</span>
+                  </div>
+                  <input type="range" class="control-slider" value="60" />
+                </div>
+                <div class="control-row">
+                  <div class="control-label">
+                    <span>Gravity</span>
+                    <span class="control-value">9.8 m/s²</span>
+                  </div>
+                  <input type="range" class="control-slider" value="50" />
+                </div>
+                <div class="control-row">
+                  <div class="control-label">
+                    <span>Initial Angle</span>
+                    <span class="control-value">30°</span>
+                  </div>
+                  <input type="range" class="control-slider" value="30" />
+                </div>
+              </div>
+
+              <div class="sim-panel">
+                <div class="panel-header">Telemetry</div>
+                <div class="data-grid">
+                  <div class="data-item">
+                    <div class="data-label">Period</div>
+                    <div class="data-value">2.19 s</div>
+                  </div>
+                  <div class="data-item">
+                    <div class="data-label">Frequency</div>
+                    <div class="data-value">0.46 Hz</div>
+                  </div>
+                  <div class="data-item">
+                    <div class="data-label">Velocity</div>
+                    <div class="data-value">1.82 m/s</div>
+                  </div>
+                  <div class="data-item">
+                    <div class="data-label">Energy</div>
+                    <div class="data-value">0.34 J</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Components Section -->
+    <section id="components" class="components-section">
+      <span class="section-label">07 — Component Library</span>
+      <h2>Building blocks.</h2>
+      <p>Consistent components that work across every episode and domain.</p>
+
+      <div class="component-grid">
+        <div class="component-box">
+          <h4>Buttons</h4>
+          <div class="btn-row">
+            <button class="btn btn-primary btn-sm">Primary</button>
+            <button class="btn btn-secondary btn-sm">Secondary</button>
+            <button class="btn btn-ghost btn-sm">Ghost</button>
+          </div>
+        </div>
+
+        <div class="component-box">
+          <h4>Inputs</h4>
+          <div class="input-stack">
+            <input type="text" class="input-field" placeholder="Enter mission name..." />
+            <input type="email" class="input-field" placeholder="Email for updates" />
+          </div>
+        </div>
+
+        <div class="component-box">
+          <h4>Status Badges</h4>
+          <div class="badge-row">
+            <span class="badge badge-success">✓ Complete</span>
+            <span class="badge badge-warning">⚡ In Progress</span>
+            <span class="badge badge-error">✕ Failed</span>
+            <span class="badge badge-neutral">○ Standby</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+      <div class="footer-logo"><em>E</em>ssayons</div>
+      <p class="footer-tagline">"Let us try."</p>
+      <p class="footer-meta">
+        Brand Visual System v2.0 — February 2026<br />Physics • Civics • Economics • History •
+        Biology • Engineering • And beyond.
+      </p>
+    </footer>
+
+    <script>
+      function showMockup(type) {
+        // Update tabs
+        document.querySelectorAll('.mockup-tab').forEach((tab) => tab.classList.remove('active'))
+        event.target.classList.add('active')
+
+        // Show/hide mockups
+        if (type === 'landing') {
+          document.getElementById('landing-mockup').style.display = 'block'
+          document.getElementById('simulator-mockup').style.display = 'none'
+          document.getElementById('simulator-mockup').classList.remove('active')
+        } else {
+          document.getElementById('landing-mockup').style.display = 'none'
+          document.getElementById('simulator-mockup').style.display = 'block'
+          document.getElementById('simulator-mockup').classList.add('active')
+        }
+      }
+    </script>
+  </body>
+</html>

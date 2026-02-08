@@ -1,0 +1,71 @@
+/* TeacherSection Styles */
+
+.teacher-section {
+  padding: var(--space-11) var(--space-4);
+  background-color: var(--cream);
+}
+
+.teacher-inner {
+  max-width: 720px;
+  margin-inline: auto;
+  text-align: center;
+}
+
+.teacher-heading {
+  margin-bottom: var(--space-6);
+}
+
+.teacher-description {
+  font-family: var(--font-body);
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  color: var(--slate);
+}
+
+.teacher-features {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-8);
+  text-align: left;
+  list-style: none;
+}
+
+.teacher-feature {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.teacher-feature-icon {
+  flex-shrink: 0;
+  font-size: 1.25rem;
+  line-height: 1.6;
+}
+
+@media (min-width: 768px) {
+  .teacher-section {
+    padding: var(--space-11) var(--space-6);
+  }
+
+  .teacher-features {
+    flex-direction: row;
+    text-align: center;
+  }
+
+  .teacher-feature {
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+  }
+}
+
+@media (min-width: 1024px) {
+  .teacher-section {
+    padding: var(--space-11) var(--space-8);
+  }
+}

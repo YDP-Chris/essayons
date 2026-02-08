@@ -1,0 +1,119 @@
+/* ParameterPanel — sidebar of episode parameter controls */
+
+.parameter-panel {
+  width: 100%;
+}
+
+.parameter-panel__title {
+  font-family: var(--font-heading, sans-serif);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.parameter-panel__controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* Boolean control */
+
+.parameter-panel__boolean {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.parameter-panel__boolean-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.parameter-panel__checkbox {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--domain-accent, var(--spark));
+  cursor: pointer;
+}
+
+.parameter-panel__boolean-text {
+  font-family: var(--font-body, sans-serif);
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: var(--color-text-primary);
+}
+
+/* Enum control */
+
+.parameter-panel__enum {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.parameter-panel__enum-label {
+  font-family: var(--font-body, sans-serif);
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: var(--color-text-primary);
+}
+
+.parameter-panel__select {
+  appearance: none;
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-body, sans-serif);
+  font-size: 0.875rem;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-elevated, #fff);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.parameter-panel__select:focus {
+  outline: 2px solid var(--domain-accent, var(--spark));
+  outline-offset: 2px;
+}
+
+.parameter-panel__select:hover {
+  border-color: var(--domain-accent, var(--spark));
+}
+
+/* Vector2 control */
+
+.parameter-panel__vector2 {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.parameter-panel__vector2-label {
+  font-family: var(--font-body, sans-serif);
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: var(--color-text-primary);
+}
+
+.parameter-panel__vector2-axes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-left: var(--space-3);
+}
+
+/* Shared description */
+
+.parameter-panel__description {
+  font-family: var(--font-body, sans-serif);
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}

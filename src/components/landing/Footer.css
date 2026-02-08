@@ -1,0 +1,34 @@
+/* Footer Styles */
+
+.landing-footer {
+  padding: var(--space-9) var(--space-4);
+  text-align: center;
+  border-top: 1px solid var(--color-border-light);
+}
+
+.footer-brand {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  line-height: 1.1;
+  color: var(--ink);
+}
+
+.footer-brand em {
+  font-style: italic;
+  color: var(--spark);
+}
+
+.footer-tagline {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--slate);
+  margin-top: var(--space-2);
+}
+
+.footer-copyright {
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  color: var(--stone);
+  margin-top: var(--space-6);
+}

@@ -1,0 +1,100 @@
+/* ReferencePanel — educational content sidebar */
+
+.reference-panel {
+  width: 100%;
+}
+
+.reference-panel__title {
+  font-family: var(--font-heading, sans-serif);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+/* Tab navigation */
+
+.reference-panel__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+}
+
+.reference-panel__tab {
+  font-size: 0.8125rem;
+}
+
+/* Item list */
+
+.reference-panel__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.reference-panel__empty {
+  font-family: var(--font-body, sans-serif);
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  padding: var(--space-4) 0;
+  text-align: center;
+}
+
+/* Collapsible item */
+
+.reference-panel__item {
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: box-shadow var(--transition-fast);
+}
+
+.reference-panel__item[data-expanded='true'] {
+  box-shadow: var(--shadow-sm);
+}
+
+.reference-panel__item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: var(--font-body, sans-serif);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  text-align: left;
+  min-height: 44px;
+  transition: background-color var(--transition-fast);
+}
+
+.reference-panel__item-header:hover {
+  background-color: var(--color-bg-secondary, var(--cream));
+}
+
+.reference-panel__item-title {
+  flex: 1;
+}
+
+.reference-panel__item-chevron {
+  font-size: 0.625rem;
+  color: var(--color-text-muted);
+  margin-left: var(--space-2);
+}
+
+.reference-panel__item-body {
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.reference-panel__item-content {
+  font-family: var(--font-body, sans-serif);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  margin: 0;
+  white-space: pre-wrap;
+}

@@ -1,0 +1,80 @@
+@import './tokens.css';
+@import './typography.css';
+@import './colors.css';
+@import './accessibility.css';
+
+:root {
+  /* Core Palette */
+  --ink: #1a1a2e;
+  --graphite: #2d2d44;
+  --slate: #4a4a68;
+  --stone: #8e8ea0;
+  --paper: #f7f6f3;
+  --cream: #fffef9;
+
+  /* Action Colors */
+  --spark: #ff6b35;
+  --growth: #2ec4b6;
+  --think: #7b68ee;
+  --warm: #ffb800;
+
+  /* Domain Accent Colors */
+  --physics: #00d4aa;
+  --civics: #e63946;
+  --economics: #2a9d8f;
+  --history: #e9c46a;
+  --biology: #8ac926;
+  --engineering: #ff6b35;
+
+  /* Typography */
+  --font-display: 'Instrument Serif', Georgia, serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.6;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+h1 em {
+  font-style: italic;
+  color: var(--spark);
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.tagline {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.5rem;
+  color: var(--slate);
+  margin-top: 0.5rem;
+}

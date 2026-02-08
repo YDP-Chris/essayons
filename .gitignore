@@ -1,0 +1,26 @@
+node_modules
+dist
+*.local
+.env
+.env.*
+!.env.example
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# Testing
+coverage
+test-results
+playwright-report
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code
+.claude/
+
+# Build
+*.tsbuildinfo

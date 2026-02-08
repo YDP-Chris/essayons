@@ -1,0 +1,63 @@
+/* ValueProps Styles */
+
+.value-props {
+  padding: var(--space-11) var(--space-4);
+}
+
+.value-props-heading {
+  text-align: center;
+  margin-bottom: var(--space-9);
+}
+
+.value-props-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-8);
+  max-width: 1280px;
+  margin-inline: auto;
+}
+
+.value-prop {
+  text-align: center;
+}
+
+.value-prop-icon {
+  font-size: 2.5rem;
+  line-height: 1;
+  margin-bottom: var(--space-4);
+}
+
+.value-prop-title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.5rem;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.value-prop-description {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--slate);
+  margin-top: var(--space-3);
+  max-width: 36ch;
+  margin-inline: auto;
+}
+
+@media (min-width: 768px) {
+  .value-props {
+    padding: var(--space-11) var(--space-6);
+  }
+
+  .value-props-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-6);
+  }
+}
+
+@media (min-width: 1024px) {
+  .value-props {
+    padding: var(--space-11) var(--space-8);
+  }
+}

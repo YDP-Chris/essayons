@@ -1,0 +1,51 @@
+/* Color System — Semantic Mappings & Domain Theming Classes */
+
+:root {
+  /* Semantic color mappings (dark-on-light default theme) */
+  --color-text-primary: var(--ink);
+  --color-text-secondary: var(--slate);
+  --color-text-muted: var(--stone);
+  --color-text-inverse: var(--cream);
+
+  --color-bg-primary: var(--paper);
+  --color-bg-secondary: var(--cream);
+  --color-bg-elevated: #ffffff;
+
+  --color-border: var(--stone);
+  --color-border-light: color-mix(in srgb, var(--stone) 30%, var(--paper));
+
+  --color-action-primary: var(--spark);
+  --color-action-secondary: var(--growth);
+  --color-action-accent: var(--domain-accent);
+
+  /* Status colors (colorblind-safe: not relying on red/green alone) */
+  --color-status-success: var(--growth);
+  --color-status-warning: var(--warm);
+  --color-status-error: var(--civics);
+  --color-status-info: var(--think);
+}
+
+/* Domain theming classes — override --domain-accent */
+.domain-physics {
+  --domain-accent: var(--physics);
+}
+
+.domain-civics {
+  --domain-accent: var(--civics);
+}
+
+.domain-economics {
+  --domain-accent: var(--economics);
+}
+
+.domain-history {
+  --domain-accent: var(--history);
+}
+
+.domain-biology {
+  --domain-accent: var(--biology);
+}
+
+.domain-engineering {
+  --domain-accent: var(--engineering);
+}
