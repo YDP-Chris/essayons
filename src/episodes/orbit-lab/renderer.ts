@@ -1065,68 +1065,130 @@ function drawHud(
   const dist = Math.sqrt((satellite.x - planet.x) ** 2 + (satellite.y - planet.y) ** 2)
   const altitude = dist - planet.radius
   const speed = Math.sqrt(satellite.vx ** 2 + satellite.vy ** 2)
+  const isBound = state.specificEnergy < 0 && !state.escaped
 
-  ctx.font = '13px monospace'
-  ctx.textAlign = 'right'
+  // --- Build metric cells ---
+  interface Cell {
+    label: string
+    value: string
+    color: string
+    width: number
+  }
 
-  const lines: Array<{ text: string; color?: string }> = [
-    { text: `${planetName}`, color: '#88aacc' },
-    { text: `Alt: ${(altitude / 1000).toFixed(1)} km` },
-    { text: `Vel: ${speed.toFixed(0)} m/s` },
-    { text: `Orbits: ${state.orbitsCompleted}` },
-    { text: `Time: ${state.simTime.toFixed(1)} s` },
+  const cells: Cell[] = [
+    { label: 'BODY', value: planetName, color: '#88bbdd', width: 70 },
+    { label: 'ALT', value: `${(altitude / 1000).toFixed(1)} km`, color: '#e2e8f0', width: 90 },
+    { label: 'VEL', value: `${speed.toFixed(0)} m/s`, color: '#e2e8f0', width: 90 },
+    { label: 'ORBITS', value: `${state.orbitsCompleted}`, color: '#e2e8f0', width: 55 },
   ]
 
   if (state.orbitalPeriod > 0 && !state.escaped) {
-    lines.push({ text: `Period: ${(state.orbitalPeriod / 60).toFixed(1)} min` })
-  }
-
-  if (showMetrics) {
-    const isBound = state.specificEnergy < 0 && !state.escaped
-
-    lines.push({
-      text: `Ecc: ${isBound ? state.eccentricity.toFixed(4) : '---'}`,
-      color: '#00D4AA',
-    })
-    lines.push({
-      text: `Apogee: ${isBound ? (state.apogee / 1000).toFixed(1) + ' km' : '---'}`,
-      color: '#00D4AA',
-    })
-    lines.push({
-      text: `Perigee: ${isBound ? (state.perigee / 1000).toFixed(1) + ' km' : '---'}`,
-      color: '#00D4AA',
-    })
-    const energyMJ = state.specificEnergy / 1e6
-    const sign = energyMJ >= 0 ? '+' : ''
-    lines.push({
-      text: `Energy: ${sign}${energyMJ.toFixed(2)} MJ/kg`,
-      color: '#00D4AA',
-    })
-    lines.push({
-      text: `Accel: ${state.acceleration.toFixed(2)} m/s\u00B2`,
-      color: '#00D4AA',
+    cells.push({
+      label: 'PERIOD',
+      value: `${(state.orbitalPeriod / 60).toFixed(1)}m`,
+      color: '#e2e8f0',
+      width: 68,
     })
   }
 
-  if (state.crashed) {
-    lines.push({ text: 'STATUS: CRASHED', color: '#ef4444' })
-  } else if (state.escaped) {
-    lines.push({ text: 'STATUS: ESCAPED', color: '#22c55e' })
+  if (showMetrics && isBound) {
+    cells.push({
+      label: 'ECC',
+      value: state.eccentricity.toFixed(4),
+      color: '#00D4AA',
+      width: 72,
+    })
+    cells.push({
+      label: 'APO',
+      value: `${(state.apogee / 1000).toFixed(0)} km`,
+      color: '#00D4AA',
+      width: 78,
+    })
+    cells.push({
+      label: 'PER',
+      value: `${(state.perigee / 1000).toFixed(0)} km`,
+      color: '#00D4AA',
+      width: 78,
+    })
   }
 
-  const x = width - 16
-  let y = 24
+  cells.push({
+    label: 'TIME',
+    value:
+      state.simTime >= 3600
+        ? `${(state.simTime / 3600).toFixed(1)}h`
+        : `${(state.simTime / 60).toFixed(1)}m`,
+    color: 'rgba(255,255,255,0.5)',
+    width: 55,
+  })
 
-  const lineHeight = 18
-  const boxHeight = lines.length * lineHeight + 8
-  const boxWidth = 220
-  ctx.fillStyle = 'rgba(10, 10, 26, 0.7)'
-  ctx.fillRect(x - boxWidth, y - 14, boxWidth + 8, boxHeight)
+  // --- Layout: horizontal bar across the top ---
+  const barHeight = 44
+  const barPad = 8
+  const cellGap = 2
+  const totalCellWidth = cells.reduce((sum, c) => sum + c.width + cellGap, 0)
+  const barLeft = Math.max(0, (width - totalCellWidth) / 2)
 
-  for (const line of lines) {
-    ctx.fillStyle = line.color ?? COLORS.text
-    ctx.fillText(line.text, x, y)
-    y += lineHeight
+  // Background bar
+  ctx.fillStyle = 'rgba(5, 8, 18, 0.75)'
+  ctx.fillRect(0, 0, width, barHeight)
+  // Bottom edge highlight
+  ctx.fillStyle = 'rgba(100, 180, 255, 0.08)'
+  ctx.fillRect(0, barHeight - 1, width, 1)
+
+  // Draw each cell
+  let cx = barLeft
+  for (const cell of cells) {
+    // Cell background
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.03)'
+    ctx.fillRect(cx, 3, cell.width, barHeight - 6)
+    // Left accent line
+    ctx.fillStyle = cell.color
+    ctx.globalAlpha = 0.3
+    ctx.fillRect(cx, 6, 2, barHeight - 12)
+    ctx.globalAlpha = 1
+
+    // Label
+    ctx.font = '9px monospace'
+    ctx.textAlign = 'left'
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)'
+    ctx.fillText(cell.label, cx + barPad, 16)
+
+    // Value
+    ctx.font = 'bold 13px monospace'
+    ctx.fillStyle = cell.color
+    ctx.fillText(cell.value, cx + barPad, 34)
+
+    cx += cell.width + cellGap
+  }
+
+  // --- Status badge (CRASHED / ESCAPED) ---
+  if (state.crashed || state.escaped) {
+    const statusText = state.crashed ? 'CRASHED' : 'ESCAPED'
+    const statusColor = state.crashed ? '#ef4444' : '#22c55e'
+    const statusBg = state.crashed ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)'
+
+    ctx.font = 'bold 14px monospace'
+    const tw = ctx.measureText(statusText).width
+    const badgeW = tw + 24
+    const badgeX = (width - badgeW) / 2
+    const badgeY = barHeight + 12
+
+    // Badge background
+    ctx.fillStyle = statusBg
+    ctx.beginPath()
+    ctx.roundRect(badgeX, badgeY, badgeW, 28, 6)
+    ctx.fill()
+    // Badge border
+    ctx.strokeStyle = statusColor
+    ctx.lineWidth = 1.5
+    ctx.beginPath()
+    ctx.roundRect(badgeX, badgeY, badgeW, 28, 6)
+    ctx.stroke()
+    // Badge text
+    ctx.fillStyle = statusColor
+    ctx.textAlign = 'center'
+    ctx.fillText(statusText, width / 2, badgeY + 20)
   }
 }
 
