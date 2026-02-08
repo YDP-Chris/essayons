@@ -23,7 +23,9 @@ export type {
 // ---- Registry ----
 export {
   registerEpisode,
+  registerEpisodeDefinition,
   getEpisode,
+  getEpisodeDefinition,
   getAllEpisodes,
   getEpisodesByDomain,
   clearRegistry,

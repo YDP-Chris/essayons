@@ -117,3 +117,18 @@
   color: var(--color-text-muted);
   line-height: 1.4;
 }
+
+/* Touch-friendly controls on mobile/tablet */
+
+@media (max-width: 767px) {
+  /* Increase spacing between controls */
+  .parameter-panel__controls > * + * {
+    margin-top: var(--space-1);
+  }
+
+  /* Ensure all interactive elements have 44px touch targets */
+  .parameter-panel__boolean-label,
+  .parameter-panel__select {
+    min-height: 44px;
+  }
+}

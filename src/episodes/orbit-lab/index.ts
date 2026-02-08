@@ -24,7 +24,7 @@ import {
 } from './physics.ts'
 import type { OrbitalState } from './physics.ts'
 import { renderOrbitLab } from './renderer.ts'
-import { registerEpisode } from '../registry.ts'
+import { registerEpisode, registerEpisodeDefinition } from '../registry.ts'
 
 // ---------------------------------------------------------------------------
 // Mission check function map
@@ -146,6 +146,7 @@ export const orbitLabDefinition: EpisodeDefinition = {
 // ---------------------------------------------------------------------------
 
 registerEpisode(orbitLabConfig)
+registerEpisodeDefinition(orbitLabDefinition)
 
 export { orbitLabConfig } from './config.ts'
 export {

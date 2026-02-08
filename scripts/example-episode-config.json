@@ -1,0 +1,46 @@
+{
+  "id": "example-lab",
+  "title": "Example Lab",
+  "subtitle": "A template episode",
+  "domain": "physics",
+  "simulationMode": "continuous",
+  "description": "An example episode to get started.",
+  "parameters": [
+    {
+      "id": "speed",
+      "label": "Speed",
+      "type": "number",
+      "default": 1,
+      "min": 0,
+      "max": 10,
+      "step": 0.1,
+      "unit": "m/s",
+      "description": "Speed of the object"
+    }
+  ],
+  "equations": [],
+  "missions": [
+    {
+      "id": "first-mission",
+      "title": "Get Started",
+      "briefing": "Complete the first challenge.",
+      "objectives": [
+        {
+          "id": "obj-1",
+          "description": "Reach the goal",
+          "check": "checkGoal"
+        }
+      ],
+      "hints": ["Try adjusting the speed parameter"],
+      "successMessage": "Well done!"
+    }
+  ],
+  "referenceContent": [],
+  "initialState": {
+    "x": 0,
+    "y": 0,
+    "vx": 0,
+    "vy": 0
+  },
+  "renderLayers": []
+}

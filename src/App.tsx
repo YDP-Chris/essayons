@@ -1,37 +1,31 @@
-import { useState, useCallback } from 'react'
 import { HeroSection } from '@/components/landing/HeroSection'
 import { EpisodeGrid } from '@/components/landing/EpisodeGrid'
 import { ValueProps } from '@/components/landing/ValueProps'
 import { TeacherSection } from '@/components/landing/TeacherSection'
 import { Footer } from '@/components/landing/Footer'
 import { EpisodeShell } from '@/episodes/EpisodeShell'
+import { useRoute, navigate } from '@/shared/router'
 
-// Register Orbit Lab episode (side-effect import triggers registerEpisode)
+// Register episodes (side-effect imports trigger registerEpisode)
 import '@/episodes/orbit-lab/index.ts'
+import '@/episodes/market-lab/index.ts'
+import '@/episodes/citizen-lab/index.ts'
+import '@/episodes/gene-lab/index.ts'
+import '@/episodes/bridge-lab/index.ts'
 
 export function App() {
-  const [activeEpisodeId, setActiveEpisodeId] = useState<string | null>(null)
+  const route = useRoute()
 
-  const handleNavigateToEpisode = useCallback((episodeId: string) => {
-    setActiveEpisodeId(episodeId)
-    window.scrollTo(0, 0)
-  }, [])
-
-  const handleBackToLanding = useCallback(() => {
-    setActiveEpisodeId(null)
-    window.scrollTo(0, 0)
-  }, [])
-
-  if (activeEpisodeId) {
+  if (route.route === 'episode') {
     return (
       <div className="app">
         <nav className="episode-nav">
-          <button className="episode-nav__back" onClick={handleBackToLanding} type="button">
+          <button className="episode-nav__back" onClick={() => navigate('/')} type="button">
             &larr; Back to Labs
           </button>
         </nav>
         <main id="main-content">
-          <EpisodeShell episodeId={activeEpisodeId} />
+          <EpisodeShell episodeId={route.params.id!} />
         </main>
       </div>
     )
@@ -44,7 +38,7 @@ export function App() {
       </a>
       <main id="main-content">
         <HeroSection />
-        <EpisodeGrid onSelectEpisode={handleNavigateToEpisode} />
+        <EpisodeGrid onSelectEpisode={(id) => navigate(`/episode/${id}`)} />
         <ValueProps />
         <TeacherSection />
       </main>

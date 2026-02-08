@@ -23,11 +23,14 @@ import type {
   PhysicsState,
 } from '@/engine/types.ts'
 import { SimulationEngine } from '@/engine/SimulationEngine.ts'
-import { getEpisode } from './registry.ts'
+import { getEpisode, getEpisodeDefinition } from './registry.ts'
 import { ParameterPanel } from './ParameterPanel.tsx'
 import { MissionPanel } from './MissionPanel.tsx'
 import { ReferencePanel } from './ReferencePanel.tsx'
 import { Button } from '@/components/ui/Button.tsx'
+import { Drawer } from '@/components/ui/Drawer.tsx'
+import { BottomSheet } from '@/components/ui/BottomSheet.tsx'
+import { useIsMobile, useIsTablet } from '@/hooks/useMediaQuery.ts'
 import {
   trackSimulationInteraction,
   trackMissionStart,
@@ -157,11 +160,21 @@ export function EpisodeShell({ episodeId }: EpisodeShellProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [activeMissionIndex, setActiveMissionIndex] = useState(0)
 
+  // Responsive state
+  const isMobile = useIsMobile()
+  const isTablet = useIsTablet()
+  const isSmallScreen = isMobile || isTablet
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [referenceOpen, setReferenceOpen] = useState(false)
+
   // ---- Create engine synchronously when config changes ----
   const engine = useMemo(() => {
     if (!config) return null
     const newEngine = new SimulationEngine()
-    const episodeDef = configToEpisodeDefinition(config)
+    // Prefer a registered EpisodeDefinition (with real physics/render) over
+    // the generic config-to-definition adapter (which has no-op stubs).
+    const registeredDef = getEpisodeDefinition(config.id)
+    const episodeDef = registeredDef ?? configToEpisodeDefinition(config)
     newEngine.loadEpisode(episodeDef)
     return newEngine
   }, [config])
@@ -314,6 +327,16 @@ export function EpisodeShell({ episodeId }: EpisodeShellProps) {
           <p className="episode-shell__subtitle">{config.subtitle}</p>
         </div>
         <div className="episode-shell__controls">
+          {isSmallScreen && (
+            <>
+              <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(true)}>
+                Parameters
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setReferenceOpen(true)}>
+                Reference
+              </Button>
+            </>
+          )}
           {state.paused || !state.running ? (
             <Button variant="domain" size="sm" onClick={handlePlay}>
               Play
@@ -341,26 +364,54 @@ export function EpisodeShell({ episodeId }: EpisodeShellProps) {
         </div>
 
         {/* Sidebar */}
-        <aside className="episode-shell__sidebar">
-          <ParameterPanel
-            parameters={config.parameters}
-            values={state.params}
-            episodeId={config.id}
-            onParameterChange={handleParameterChange}
-          />
+        {isSmallScreen ? (
+          <Drawer open={sidebarOpen} onClose={() => setSidebarOpen(false)} title="Parameters">
+            <ParameterPanel
+              parameters={config.parameters}
+              values={state.params}
+              episodeId={config.id}
+              onParameterChange={handleParameterChange}
+            />
 
-          <MissionPanel
-            missions={config.missions}
-            missionState={state.missionState as MissionState}
-            activeMissionIndex={activeMissionIndex}
-            onSelectMission={handleSelectMission}
-          />
-        </aside>
+            <MissionPanel
+              missions={config.missions}
+              missionState={state.missionState as MissionState}
+              activeMissionIndex={activeMissionIndex}
+              onSelectMission={handleSelectMission}
+            />
+          </Drawer>
+        ) : (
+          <aside className="episode-shell__sidebar">
+            <ParameterPanel
+              parameters={config.parameters}
+              values={state.params}
+              episodeId={config.id}
+              onParameterChange={handleParameterChange}
+            />
+
+            <MissionPanel
+              missions={config.missions}
+              missionState={state.missionState as MissionState}
+              activeMissionIndex={activeMissionIndex}
+              onSelectMission={handleSelectMission}
+            />
+          </aside>
+        )}
 
         {/* Reference panel */}
-        <aside className="episode-shell__reference">
-          <ReferencePanel references={config.referenceContent} />
-        </aside>
+        {isSmallScreen ? (
+          <BottomSheet
+            open={referenceOpen}
+            onClose={() => setReferenceOpen(false)}
+            title="Reference"
+          >
+            <ReferencePanel references={config.referenceContent} />
+          </BottomSheet>
+        ) : (
+          <aside className="episode-shell__reference">
+            <ReferencePanel references={config.referenceContent} />
+          </aside>
+        )}
       </div>
     </div>
   )

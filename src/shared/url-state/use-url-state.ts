@@ -19,7 +19,14 @@ import { validateParams } from './validator.ts'
  */
 export function useUrlState(schemas: readonly ParameterSchema[]): UseUrlStateResult {
   const { params, isFromUrl } = useMemo(() => {
-    const url = typeof window !== 'undefined' ? window.location.search : ''
+    // Read query params from hash portion (after '?')
+    if (typeof window === 'undefined') {
+      return { params: {}, isFromUrl: false }
+    }
+
+    const hash = window.location.hash
+    const queryIndex = hash.indexOf('?')
+    const url = queryIndex >= 0 ? hash.slice(queryIndex) : ''
     const hasParams = url.length > 1 // more than just "?"
 
     const decoded = decodeState(url, schemas)
@@ -34,8 +41,16 @@ export function useUrlState(schemas: readonly ParameterSchema[]): UseUrlStateRes
   const shareCurrentState = useMemo(() => {
     return (currentParams: ParameterValues): string => {
       const query = encodeState(currentParams, schemas)
-      const base =
-        typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}` : ''
+      if (typeof window === 'undefined') {
+        return ''
+      }
+
+      // Build URL with hash path + query params
+      const hash = window.location.hash
+      const queryIndex = hash.indexOf('?')
+      const hashPath = queryIndex >= 0 ? hash.slice(0, queryIndex) : hash
+      const base = `${window.location.origin}${window.location.pathname}${hashPath}`
+
       if (query.length === 0) {
         return base
       }

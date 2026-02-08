@@ -114,6 +114,11 @@ export class SimulationEngine implements SimulationEngineInterface, Subscribable
     // Let the episode initialize (register render layers, etc.)
     episode.init(this)
 
+    // Register the episode's own render function as a default layer
+    this.renderer.addLayer('__episode__', 0, (ctx, state, params) => {
+      episode.render(ctx, state, params)
+    })
+
     // Create initial physics state
     this._physicsState = episode.createInitialState()
 

@@ -1,10 +1,11 @@
 import './EpisodeGrid.css'
+import { Icon } from '@/components/icons'
 
 interface Episode {
   name: string
   episodeId: string
   domain: string
-  icon: string
+  iconName: string
   hook: string
   color: string
   available: boolean
@@ -15,7 +16,7 @@ const episodes: Episode[] = [
     name: 'Orbit Lab',
     episodeId: 'orbit-lab',
     domain: 'Physics',
-    icon: '\u{1F6F0}\uFE0F',
+    iconName: 'physics',
     hook: 'Crash satellites into Earth until you understand gravity.',
     color: 'var(--physics)',
     available: true,
@@ -24,25 +25,25 @@ const episodes: Episode[] = [
     name: 'Citizen Lab',
     episodeId: 'citizen-lab',
     domain: 'Civics',
-    icon: '\u{1F3DB}\uFE0F',
+    iconName: 'civics',
     hook: 'Run a democracy. See what breaks.',
     color: 'var(--civics)',
-    available: false,
+    available: true,
   },
   {
     name: 'Market Lab',
     episodeId: 'market-lab',
     domain: 'Economics',
-    icon: '\u{1F4C8}',
+    iconName: 'economics',
     hook: 'Watch supply meet demand. Crash markets.',
     color: 'var(--economics)',
-    available: false,
+    available: true,
   },
   {
     name: 'History Lab',
     episodeId: 'history-lab',
     domain: 'History',
-    icon: '\u{1F4DC}',
+    iconName: 'history',
     hook: 'What if? Change variables, see consequences.',
     color: 'var(--history)',
     available: false,
@@ -51,19 +52,19 @@ const episodes: Episode[] = [
     name: 'Gene Lab',
     episodeId: 'gene-lab',
     domain: 'Biology',
-    icon: '\u{1F9EC}',
+    iconName: 'biology',
     hook: 'Breed generations. Watch traits emerge.',
     color: 'var(--biology)',
-    available: false,
+    available: true,
   },
   {
     name: 'Bridge Lab',
     episodeId: 'bridge-lab',
     domain: 'Engineering',
-    icon: '\u2699\uFE0F',
+    iconName: 'engineering',
     hook: 'Build structures. Apply loads. Watch them fail.',
     color: 'var(--engineering)',
-    available: false,
+    available: true,
   },
 ]
 
@@ -92,7 +93,7 @@ function EpisodeCard({
         }}
       >
         <span className="episode-card-icon" aria-hidden="true">
-          {episode.icon}
+          <Icon name={episode.iconName} size={32} />
         </span>
         <span className="episode-card-name">{episode.name}</span>
         <span className="episode-card-domain">{episode.domain}</span>
@@ -104,7 +105,7 @@ function EpisodeCard({
   return (
     <div className="episode-card episode-card--disabled" style={style}>
       <span className="episode-card-icon" aria-hidden="true">
-        {episode.icon}
+        <Icon name={episode.iconName} size={32} />
       </span>
       <span className="episode-card-name">{episode.name}</span>
       <span className="episode-card-domain">{episode.domain}</span>

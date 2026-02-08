@@ -1,9 +1,11 @@
 import { Button } from '@/components/ui/Button'
+import { DomainOrbit } from '@/components/DomainOrbit'
 import './HeroSection.css'
 
 export function HeroSection() {
   return (
     <section className="hero" aria-labelledby="hero-headline">
+      <DomainOrbit />
       <h1 id="hero-headline" className="hero-headline">
         Learn by crashing into things.
       </h1>

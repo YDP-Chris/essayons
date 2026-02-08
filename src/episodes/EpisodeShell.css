@@ -154,4 +154,18 @@
   .episode-shell__title {
     font-size: 1.25rem;
   }
+
+  /* Hide sidebar and reference on small screens - they'll be in Drawer/BottomSheet */
+  .episode-shell__sidebar,
+  .episode-shell__reference {
+    display: none;
+  }
+
+  .episode-shell__canvas {
+    min-height: 250px;
+  }
+
+  .episode-shell__canvas-wrapper {
+    min-height: 250px;
+  }
 }

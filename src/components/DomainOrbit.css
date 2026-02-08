@@ -1,0 +1,122 @@
+/* DomainOrbit Component Styles */
+
+.domain-orbit {
+  position: relative;
+  width: 400px;
+  height: 400px;
+  margin: 0 auto;
+}
+
+.domain-orbit__center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: #1a1a2e;
+  box-shadow: 0 0 40px rgba(0, 212, 170, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.domain-orbit__logo {
+  font-family: var(--font-display, 'Instrument Serif', serif);
+  font-style: italic;
+  font-size: 3.5rem;
+  color: #faf3e0;
+}
+
+.domain-orbit__ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border: 1px dashed rgba(250, 243, 224, 0.15);
+  border-radius: 50%;
+}
+
+.domain-orbit__ring--1 {
+  width: 200px;
+  height: 200px;
+  margin: -100px 0 0 -100px;
+  animation: orbit-spin 30s linear infinite;
+}
+
+.domain-orbit__ring--2 {
+  width: 300px;
+  height: 300px;
+  margin: -150px 0 0 -150px;
+  animation: orbit-spin 45s linear infinite reverse;
+}
+
+.domain-orbit__ring--3 {
+  width: 400px;
+  height: 400px;
+  margin: -200px 0 0 -200px;
+  animation: orbit-spin 60s linear infinite;
+}
+
+@keyframes orbit-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Domain nodes */
+.domain-orbit__node {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 36px;
+  height: 36px;
+  margin: -18px 0 0 -18px;
+  border-radius: 50%;
+  background: var(--node-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(var(--node-angle)) translateX(var(--node-radius))
+    rotate(calc(-1 * var(--node-angle)));
+  animation: orbit-counter-spin var(--node-animation-duration) linear infinite;
+}
+
+/* Counter-rotation for ring 2 (reverse direction) */
+.domain-orbit__ring--2 .domain-orbit__node {
+  animation: orbit-counter-spin var(--node-animation-duration) linear infinite reverse;
+}
+
+@keyframes orbit-counter-spin {
+  from {
+    transform: rotate(var(--node-angle)) translateX(var(--node-radius))
+      rotate(calc(-1 * var(--node-angle)));
+  }
+  to {
+    transform: rotate(calc(var(--node-angle) + 360deg)) translateX(var(--node-radius))
+      rotate(calc(-1 * var(--node-angle) - 360deg));
+  }
+}
+
+/* Responsive: scale down on mobile */
+@media (max-width: 767px) {
+  .domain-orbit {
+    width: 300px;
+    height: 300px;
+    transform: scale(0.75);
+  }
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .domain-orbit__ring {
+    animation-play-state: paused;
+  }
+  .domain-orbit__node {
+    animation-play-state: paused;
+  }
+}

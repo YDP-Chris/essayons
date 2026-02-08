@@ -1,8 +1,13 @@
 import { render, screen } from '@testing-library/react'
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { App } from './App'
 
 describe('App', () => {
+  beforeEach(() => {
+    // Reset hash to landing page before each test
+    window.location.hash = ''
+  })
+
   it('renders without crashing', () => {
     render(<App />)
     const matches = screen.getAllByText(/ssayons/)
@@ -32,7 +37,8 @@ describe('App', () => {
   it('shows Coming Soon badges for unavailable episodes', () => {
     render(<App />)
     const badges = screen.getAllByText('Coming Soon')
-    expect(badges).toHaveLength(5)
+    // Only History Lab is unavailable now
+    expect(badges).toHaveLength(1)
   })
 
   it('makes Orbit Lab clickable', () => {
@@ -68,5 +74,11 @@ describe('App', () => {
   it('uses semantic main landmark', () => {
     render(<App />)
     expect(screen.getByRole('main')).toBeInTheDocument()
+  })
+
+  it('renders episode shell when hash is set to episode route', () => {
+    window.location.hash = '#/episode/orbit-lab'
+    render(<App />)
+    expect(screen.getByText(/Back to Labs/)).toBeInTheDocument()
   })
 })
