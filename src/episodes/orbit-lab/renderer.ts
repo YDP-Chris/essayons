@@ -1,11 +1,12 @@
 /**
  * Canvas rendering for the Orbit Lab episode.
  *
- * Draws the planet, satellite, orbit trail, and optional velocity/gravity
- * force vectors. Uses auto-fitting to keep both planet and satellite visible
- * with appropriate padding.
+ * Uses a fixed base scale (planet always visible) with user-controlled
+ * zoom and pan. Draws altitude reference grid, speed-coded trail,
+ * twinkling stars, apogee/perigee markers, and telemetry HUD.
  */
 
+import { EARTH_RADIUS } from './physics.ts'
 import type { OrbitalState } from './physics.ts'
 
 // ---------------------------------------------------------------------------
@@ -16,31 +17,186 @@ const SATELLITE_MIN_RADIUS = 4
 const SATELLITE_GLOW_MULTIPLIER = 3
 const VECTOR_SCALE = 0.00004
 const TRAIL_LINE_WIDTH = 1.5
-const VIEW_PADDING = 1.3
+
+/** Altitude grid rings: [altitude in meters, label, color, lineWidth] */
+const GRID_RINGS: Array<[number, string, string, number]> = [
+  [0, 'Surface', 'rgba(100,180,255,0.12)', 1],
+  [100_000, 'Atmo', 'rgba(255,255,255,0.04)', 0.5],
+  [400_000, 'LEO', 'rgba(255,255,255,0.04)', 0.5],
+  [1_000_000, '1000km', 'rgba(255,255,255,0.04)', 0.5],
+  [2_000_000, '2000km', 'rgba(255,255,255,0.04)', 0.5],
+  [5_000_000, '5000km', 'rgba(255,255,255,0.04)', 0.5],
+  [35_786_000, 'GEO', 'rgba(255,255,255,0.04)', 0.5],
+]
 
 // ---------------------------------------------------------------------------
 // Colors
 // ---------------------------------------------------------------------------
 
 const COLORS = {
-  background: '#0a0a1a',
+  background: '#070b14',
   planet: '#2563eb',
   planetGlow: 'rgba(37, 99, 235, 0.15)',
   planetAtmosphere: 'rgba(100, 180, 255, 0.08)',
   surfaceRing: 'rgba(100, 180, 255, 0.25)',
   satellite: '#f59e0b',
   satelliteGlow: 'rgba(245, 158, 11, 0.6)',
-  trailStart: 'rgba(245, 158, 11, 0.8)',
-  trailEnd: 'rgba(245, 158, 11, 0.0)',
   velocityVector: '#22c55e',
   gravityVector: '#ef4444',
   crashFlash: 'rgba(239, 68, 68, 0.3)',
   text: '#e2e8f0',
   textDim: '#94a3b8',
+  accent: '#00e5ff',
 } as const
 
 // ---------------------------------------------------------------------------
-// Coordinate Transforms
+// Module-level camera state (persists across frames)
+// ---------------------------------------------------------------------------
+
+let _zoom = 1
+let _camX = 0
+let _camY = 0
+let _dragging = false
+let _dragStartX = 0
+let _dragStartY = 0
+let _camStartX = 0
+let _camStartY = 0
+let _attachedCanvas: HTMLCanvasElement | null = null
+
+// Deterministic star field (generated once)
+const _stars: Array<{
+  x: number
+  y: number
+  r: number
+  brightness: number
+  speed: number
+  phase: number
+}> = []
+
+function ensureStars(): void {
+  if (_stars.length > 0) return
+  for (let i = 0; i < 140; i++) {
+    _stars.push({
+      x: Math.random(),
+      y: Math.random(),
+      r: 0.4 + Math.random() * 1.1,
+      brightness: 0.3 + Math.random() * 0.7,
+      speed: 0.5 + Math.random() * 2,
+      phase: Math.random() * 6.28,
+    })
+  }
+}
+
+/** Reset camera state (called on episode reset). */
+export function resetOrbitLabCamera(): void {
+  _zoom = 1
+  _camX = 0
+  _camY = 0
+}
+
+// ---------------------------------------------------------------------------
+// Event listeners — lazily attached to canvas
+// ---------------------------------------------------------------------------
+
+function attachInteractions(canvas: HTMLCanvasElement): void {
+  if (_attachedCanvas === canvas) return
+  detachInteractions()
+  _attachedCanvas = canvas
+
+  canvas.addEventListener('wheel', onWheel, { passive: false })
+  canvas.addEventListener('mousedown', onMouseDown)
+  window.addEventListener('mousemove', onMouseMove)
+  window.addEventListener('mouseup', onMouseUp)
+  // Touch pan
+  canvas.addEventListener('touchstart', onTouchStart, { passive: false })
+  canvas.addEventListener('touchmove', onTouchMove, { passive: false })
+  canvas.addEventListener('touchend', onTouchEnd)
+}
+
+function detachInteractions(): void {
+  if (!_attachedCanvas) return
+  _attachedCanvas.removeEventListener('wheel', onWheel)
+  _attachedCanvas.removeEventListener('mousedown', onMouseDown)
+  window.removeEventListener('mousemove', onMouseMove)
+  window.removeEventListener('mouseup', onMouseUp)
+  _attachedCanvas.removeEventListener('touchstart', onTouchStart)
+  _attachedCanvas.removeEventListener('touchmove', onTouchMove)
+  _attachedCanvas.removeEventListener('touchend', onTouchEnd)
+  _attachedCanvas = null
+}
+
+function onWheel(e: WheelEvent): void {
+  e.preventDefault()
+  const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15
+  _zoom = Math.max(0.05, Math.min(50, _zoom * factor))
+}
+
+function onMouseDown(e: MouseEvent): void {
+  _dragging = true
+  _dragStartX = e.clientX
+  _dragStartY = e.clientY
+  _camStartX = _camX
+  _camStartY = _camY
+}
+
+function onMouseMove(e: MouseEvent): void {
+  if (!_dragging || !_attachedCanvas) return
+  const w = _attachedCanvas.clientWidth
+  const h = _attachedCanvas.clientHeight
+  const bsc = Math.min(w, h) / (EARTH_RADIUS * 6)
+  const sc = bsc * _zoom
+  _camX = _camStartX + (e.clientX - _dragStartX) / sc
+  _camY = _camStartY - (e.clientY - _dragStartY) / sc
+}
+
+function onMouseUp(): void {
+  _dragging = false
+}
+
+let _lastTouchDist = 0
+
+function onTouchStart(e: TouchEvent): void {
+  if (e.touches.length === 1) {
+    _dragging = true
+    _dragStartX = e.touches[0]!.clientX
+    _dragStartY = e.touches[0]!.clientY
+    _camStartX = _camX
+    _camStartY = _camY
+  } else if (e.touches.length === 2) {
+    _lastTouchDist = Math.hypot(
+      e.touches[0]!.clientX - e.touches[1]!.clientX,
+      e.touches[0]!.clientY - e.touches[1]!.clientY,
+    )
+  }
+}
+
+function onTouchMove(e: TouchEvent): void {
+  e.preventDefault()
+  if (e.touches.length === 1 && _dragging && _attachedCanvas) {
+    const w = _attachedCanvas.clientWidth
+    const h = _attachedCanvas.clientHeight
+    const bsc = Math.min(w, h) / (EARTH_RADIUS * 6)
+    const sc = bsc * _zoom
+    _camX = _camStartX + (e.touches[0]!.clientX - _dragStartX) / sc
+    _camY = _camStartY - (e.touches[0]!.clientY - _dragStartY) / sc
+  } else if (e.touches.length === 2 && _lastTouchDist > 0) {
+    const dist = Math.hypot(
+      e.touches[0]!.clientX - e.touches[1]!.clientX,
+      e.touches[0]!.clientY - e.touches[1]!.clientY,
+    )
+    const factor = dist / _lastTouchDist
+    _zoom = Math.max(0.05, Math.min(50, _zoom * factor))
+    _lastTouchDist = dist
+  }
+}
+
+function onTouchEnd(): void {
+  _dragging = false
+  _lastTouchDist = 0
+}
+
+// ---------------------------------------------------------------------------
+// Coordinate Transforms (fixed base scale)
 // ---------------------------------------------------------------------------
 
 interface ViewTransform {
@@ -50,29 +206,27 @@ interface ViewTransform {
   readonly planetScreenRadius: number
 }
 
-function computeViewTransform(state: OrbitalState, width: number, height: number): ViewTransform {
-  const { satellite, planet, trail } = state
-
-  // Find the max distance from center across trail + current satellite position.
-  // This gives a stable view that encompasses the full orbit path so far.
-  let maxDist = Math.sqrt(satellite.x * satellite.x + satellite.y * satellite.y)
-  for (const point of trail) {
-    const d = Math.sqrt(point.x * point.x + point.y * point.y)
-    if (d > maxDist) maxDist = d
+function computeViewTransform(
+  state: OrbitalState,
+  width: number,
+  height: number,
+  follow: boolean,
+): ViewTransform {
+  // Follow mode: camera tracks satellite
+  if (follow && !state.crashed) {
+    _camX = -state.satellite.x
+    _camY = -state.satellite.y
   }
 
-  // Ensure the planet is always fully visible with a small margin
-  maxDist = Math.max(maxDist, planet.radius * 1.05)
-
-  const viewExtent = maxDist * VIEW_PADDING
-  const minDimension = Math.min(width, height)
-  const scale = minDimension / (2 * viewExtent)
+  // Fixed base scale: planet radius * 3 on each side of center
+  const bsc = Math.min(width, height) / (state.planet.radius * 6)
+  const scale = bsc * _zoom
 
   return {
     scale,
-    offsetX: width / 2,
-    offsetY: height / 2,
-    planetScreenRadius: planet.radius * scale,
+    offsetX: width / 2 + _camX * scale,
+    offsetY: height / 2 - _camY * scale, // flip Y
+    planetScreenRadius: state.planet.radius * scale,
   }
 }
 
@@ -83,7 +237,7 @@ function worldToScreen(
 ): { sx: number; sy: number } {
   return {
     sx: transform.offsetX + wx * transform.scale,
-    sy: transform.offsetY - wy * transform.scale, // flip Y for screen coords
+    sy: transform.offsetY - wy * transform.scale,
   }
 }
 
@@ -95,18 +249,44 @@ function drawBackground(ctx: CanvasRenderingContext2D, width: number, height: nu
   ctx.fillStyle = COLORS.background
   ctx.fillRect(0, 0, width, height)
 
-  // Draw some stars
-  const starSeed = 42
-  const starCount = 100
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.6)'
-  for (let i = 0; i < starCount; i++) {
-    // Deterministic pseudo-random positions using seed
-    const px = ((starSeed * (i + 1) * 7919) % 10000) / 10000
-    const py = ((starSeed * (i + 1) * 6271) % 10000) / 10000
-    const size = ((starSeed * (i + 1) * 3571) % 10000) / 10000
+  // Twinkling stars
+  ensureStars()
+  const t = performance.now() / 1000
+  for (const star of _stars) {
+    const twinkle = 0.5 + 0.5 * Math.sin(t * star.speed + star.phase)
+    ctx.globalAlpha = star.brightness * (0.6 + 0.4 * twinkle)
+    ctx.fillStyle = '#cde'
+    ctx.fillRect(star.x * width, star.y * height, star.r, star.r)
+  }
+  ctx.globalAlpha = 1
+}
+
+function drawAltitudeGrid(
+  ctx: CanvasRenderingContext2D,
+  state: OrbitalState,
+  transform: ViewTransform,
+): void {
+  const center = worldToScreen(state.planet.x, state.planet.y, transform)
+
+  ctx.font = '9px monospace'
+  ctx.textAlign = 'left'
+
+  for (const [alt, label, color, lineWidth] of GRID_RINGS) {
+    const radius = (state.planet.radius + alt) * transform.scale
+    if (radius < 5) continue
+
     ctx.beginPath()
-    ctx.arc(px * width, py * height, 0.5 + size * 1.5, 0, 2 * Math.PI)
-    ctx.fill()
+    ctx.arc(center.sx, center.sy, radius, 0, 2 * Math.PI)
+    ctx.strokeStyle = color
+    ctx.lineWidth = lineWidth
+    if (alt > 0) ctx.setLineDash([4, 8])
+    ctx.stroke()
+    ctx.setLineDash([])
+
+    if (radius > 30) {
+      ctx.fillStyle = 'rgba(255,255,255,0.1)'
+      ctx.fillText(label, center.sx + radius + 4, center.sy - 2)
+    }
   }
 }
 
@@ -117,66 +297,59 @@ function drawPlanet(
 ): void {
   const { planet } = state
   const center = worldToScreen(planet.x, planet.y, transform)
-  // Use true-scale radius — no artificial minimum
   const displayRadius = transform.planetScreenRadius
 
   // Atmosphere glow (outer)
+  const atmoRadius = (planet.radius + 300_000) * transform.scale
   const atmosphereGradient = ctx.createRadialGradient(
     center.sx,
     center.sy,
-    displayRadius * 0.9,
+    displayRadius * 0.8,
     center.sx,
     center.sy,
-    displayRadius * 1.3,
+    atmoRadius,
   )
-  atmosphereGradient.addColorStop(0, COLORS.planetAtmosphere)
-  atmosphereGradient.addColorStop(1, 'transparent')
+  atmosphereGradient.addColorStop(0, 'rgba(60,160,255,0)')
+  atmosphereGradient.addColorStop(0.5, 'rgba(60,160,255,0.04)')
+  atmosphereGradient.addColorStop(1, 'rgba(60,160,255,0)')
   ctx.fillStyle = atmosphereGradient
   ctx.beginPath()
-  ctx.arc(center.sx, center.sy, displayRadius * 1.3, 0, 2 * Math.PI)
-  ctx.fill()
-
-  // Planet glow
-  const glowGradient = ctx.createRadialGradient(
-    center.sx,
-    center.sy,
-    displayRadius * 0.5,
-    center.sx,
-    center.sy,
-    displayRadius * 1.1,
-  )
-  glowGradient.addColorStop(0, COLORS.planetGlow)
-  glowGradient.addColorStop(1, 'transparent')
-  ctx.fillStyle = glowGradient
-  ctx.beginPath()
-  ctx.arc(center.sx, center.sy, displayRadius * 1.1, 0, 2 * Math.PI)
+  ctx.arc(center.sx, center.sy, atmoRadius, 0, 2 * Math.PI)
   ctx.fill()
 
   // Planet body with gradient
   const bodyGradient = ctx.createRadialGradient(
     center.sx - displayRadius * 0.3,
     center.sy - displayRadius * 0.3,
-    displayRadius * 0.1,
+    0,
     center.sx,
     center.sy,
     displayRadius,
   )
-  bodyGradient.addColorStop(0, '#4a90d9')
-  bodyGradient.addColorStop(0.5, COLORS.planet)
-  bodyGradient.addColorStop(1, '#1a3a6b')
+  bodyGradient.addColorStop(0, '#2196F3')
+  bodyGradient.addColorStop(0.5, '#1565C0')
+  bodyGradient.addColorStop(1, '#0a2744')
   ctx.fillStyle = bodyGradient
   ctx.beginPath()
   ctx.arc(center.sx, center.sy, displayRadius, 0, 2 * Math.PI)
   ctx.fill()
 
-  // Surface ring — thin line at the planet's edge for altitude reference
-  ctx.strokeStyle = COLORS.surfaceRing
-  ctx.lineWidth = 1
-  ctx.setLineDash([4, 4])
+  // Thin atmosphere ring at planet's edge
+  const atmoEdge = (planet.radius + 100_000) * transform.scale
+  const edgeGradient = ctx.createRadialGradient(
+    center.sx,
+    center.sy,
+    displayRadius - 1,
+    center.sx,
+    center.sy,
+    atmoEdge,
+  )
+  edgeGradient.addColorStop(0, 'rgba(100,200,255,0.15)')
+  edgeGradient.addColorStop(1, 'rgba(100,200,255,0)')
+  ctx.fillStyle = edgeGradient
   ctx.beginPath()
-  ctx.arc(center.sx, center.sy, displayRadius, 0, 2 * Math.PI)
-  ctx.stroke()
-  ctx.setLineDash([])
+  ctx.arc(center.sx, center.sy, atmoEdge, 0, 2 * Math.PI)
+  ctx.fill()
 }
 
 /**
@@ -184,7 +357,6 @@ function drawPlanet(
  * 0 = blue (#3b82f6), 1 = red (#ef4444).
  */
 function speedColor(t: number): { r: number; g: number; b: number } {
-  // Blue: rgb(59, 130, 246)  Red: rgb(239, 68, 68)
   return {
     r: Math.round(59 + (239 - 59) * t),
     g: Math.round(130 + (68 - 130) * t),
@@ -200,7 +372,6 @@ function drawTrail(
   const { trail } = state
   if (trail.length < 2) return
 
-  // Find min/max speed across trail for color normalization
   let minSpeed = Infinity
   let maxSpeed = -Infinity
   for (const pt of trail) {
@@ -237,7 +408,6 @@ function drawApseMarkers(
   transform: ViewTransform,
 ): void {
   const { trail, planet } = state
-  // Only show markers when at least half an orbit has been swept
   if (Math.abs(state.totalAngle) < Math.PI) return
   if (trail.length < 2) return
 
@@ -262,12 +432,10 @@ function drawApseMarkers(
   const ACCENT = '#00D4AA'
   const MARKER_SIZE = 5
 
-  // Draw diamond marker + label for a given trail point
   const drawMarker = (idx: number, label: string) => {
     const pt = trail[idx]!
     const pos = worldToScreen(pt.x, pt.y, transform)
 
-    // Diamond shape
     ctx.fillStyle = ACCENT
     ctx.beginPath()
     ctx.moveTo(pos.sx, pos.sy - MARKER_SIZE)
@@ -277,7 +445,6 @@ function drawApseMarkers(
     ctx.closePath()
     ctx.fill()
 
-    // Label
     ctx.font = '10px monospace'
     ctx.textAlign = 'center'
     ctx.fillStyle = ACCENT
@@ -300,22 +467,19 @@ function drawSatellite(
   const radius = Math.max(SATELLITE_MIN_RADIUS, 3)
   const glowRadius = radius * SATELLITE_GLOW_MULTIPLIER
 
-  // Glow
-  const glowGradient = ctx.createRadialGradient(pos.sx, pos.sy, 0, pos.sx, pos.sy, glowRadius)
-  glowGradient.addColorStop(0, COLORS.satelliteGlow)
-  glowGradient.addColorStop(1, 'transparent')
-  ctx.fillStyle = glowGradient
+  // Glow halo
   ctx.beginPath()
-  ctx.arc(pos.sx, pos.sy, glowRadius, 0, 2 * Math.PI)
+  ctx.arc(pos.sx, pos.sy, 9, 0, 2 * Math.PI)
+  ctx.fillStyle = 'rgba(0,229,255,0.25)'
   ctx.fill()
 
-  // Body
-  ctx.fillStyle = COLORS.satellite
+  // Body (bright white dot like POC)
+  ctx.fillStyle = '#fff'
   ctx.beginPath()
   ctx.arc(pos.sx, pos.sy, radius, 0, 2 * Math.PI)
   ctx.fill()
 
-  // Direction indicator (small line in direction of travel)
+  // Direction indicator
   const speed = Math.sqrt(satellite.vx * satellite.vx + satellite.vy * satellite.vy)
   if (speed > 0) {
     const dirX = satellite.vx / speed
@@ -324,10 +488,7 @@ function drawSatellite(
     ctx.lineWidth = 2
     ctx.beginPath()
     ctx.moveTo(pos.sx, pos.sy)
-    ctx.lineTo(
-      pos.sx + dirX * glowRadius,
-      pos.sy - dirY * glowRadius, // flip Y
-    )
+    ctx.lineTo(pos.sx + dirX * glowRadius, pos.sy - dirY * glowRadius)
     ctx.stroke()
   }
 }
@@ -354,9 +515,8 @@ function drawVector(
   const dirY = vecY / magnitude
 
   const toSx = from.sx + dirX * len
-  const toSy = from.sy - dirY * len // flip Y
+  const toSy = from.sy - dirY * len
 
-  // Shaft
   ctx.strokeStyle = color
   ctx.lineWidth = 2
   ctx.beginPath()
@@ -364,10 +524,9 @@ function drawVector(
   ctx.lineTo(toSx, toSy)
   ctx.stroke()
 
-  // Arrowhead
   const headLen = 8
   const headAngle = Math.PI / 6
-  const angle = Math.atan2(-dirY, dirX) // screen space angle
+  const angle = Math.atan2(-dirY, dirX)
 
   ctx.fillStyle = color
   ctx.beginPath()
@@ -393,7 +552,6 @@ function drawVectors(
 
   const { satellite, planet } = state
 
-  // Velocity vector
   drawVector(
     ctx,
     satellite.x,
@@ -404,7 +562,6 @@ function drawVectors(
     transform,
   )
 
-  // Gravity force vector (direction toward planet)
   const dx = planet.x - satellite.x
   const dy = planet.y - satellite.y
   const dist = Math.sqrt(dx * dx + dy * dy)
@@ -414,15 +571,7 @@ function drawVectors(
     const fx = forceMag * (dx / dist)
     const fy = forceMag * (dy / dist)
 
-    drawVector(
-      ctx,
-      satellite.x,
-      satellite.y,
-      fx * 1e6,
-      fy * 1e6, // scale up force for visibility
-      COLORS.gravityVector,
-      transform,
-    )
+    drawVector(ctx, satellite.x, satellite.y, fx * 1e6, fy * 1e6, COLORS.gravityVector, transform)
   }
 }
 
@@ -445,7 +594,6 @@ function drawHud(
   ctx.font = '13px monospace'
   ctx.textAlign = 'right'
 
-  // Basic telemetry (always shown)
   const lines: Array<{ text: string; color?: string }> = [
     { text: `Alt: ${(altitude / 1000).toFixed(1)} km` },
     { text: `Vel: ${speed.toFixed(0)} m/s` },
@@ -457,7 +605,6 @@ function drawHud(
     lines.push({ text: `Period: ${(state.orbitalPeriod / 60).toFixed(1)} min` })
   }
 
-  // Expanded metrics (when toggle is on)
   if (showMetrics) {
     const isBound = state.specificEnergy < 0 && !state.escaped
 
@@ -473,7 +620,6 @@ function drawHud(
       text: `Perigee: ${isBound ? (state.perigee / 1000).toFixed(1) + ' km' : '---'}`,
       color: '#00D4AA',
     })
-    // Energy in MJ/kg (specific energy / 1e6)
     const energyMJ = state.specificEnergy / 1e6
     const sign = energyMJ >= 0 ? '+' : ''
     lines.push({
@@ -495,7 +641,6 @@ function drawHud(
   const x = width - 16
   let y = 24
 
-  // Background for readability
   const lineHeight = 18
   const boxHeight = lines.length * lineHeight + 8
   const boxWidth = 220
@@ -509,13 +654,17 @@ function drawHud(
   }
 }
 
+function drawZoomControls(ctx: CanvasRenderingContext2D, height: number): void {
+  ctx.font = '9px monospace'
+  ctx.textAlign = 'left'
+  ctx.fillStyle = 'rgba(255,255,255,0.3)'
+  ctx.fillText(`${_zoom.toFixed(1)}x  Scroll to zoom \u00B7 Drag to pan`, 16, height - 12)
+}
+
 // ---------------------------------------------------------------------------
 // Main Render Function
 // ---------------------------------------------------------------------------
 
-/**
- * Render the complete Orbit Lab scene onto a canvas.
- */
 export function renderOrbitLab(
   ctx: CanvasRenderingContext2D,
   state: OrbitalState,
@@ -523,41 +672,54 @@ export function renderOrbitLab(
   width: number,
   height: number,
 ): void {
-  const transform = computeViewTransform(state, width, height)
+  // Lazily attach interaction listeners
+  attachInteractions(ctx.canvas)
 
   const showTrail = (params['show-trail'] as boolean | undefined) ?? true
   const showVectors = (params['show-vectors'] as boolean | undefined) ?? false
   const showMetrics = (params['show-metrics'] as boolean | undefined) ?? true
+  const showGrid = (params['show-grid'] as boolean | undefined) ?? true
+  const follow = (params['follow'] as boolean | undefined) ?? false
 
-  // 1. Background
+  const transform = computeViewTransform(state, width, height, follow)
+
+  // 1. Background + stars
   drawBackground(ctx, width, height)
 
-  // 2. Trail (behind planet)
+  // 2. Altitude grid (behind everything)
+  if (showGrid) {
+    drawAltitudeGrid(ctx, state, transform)
+  }
+
+  // 3. Trail
   if (showTrail) {
     drawTrail(ctx, state, transform)
   }
 
-  // 3. Apogee/perigee markers (on top of trail, behind planet)
+  // 4. Apogee/perigee markers
   if (showTrail) {
     drawApseMarkers(ctx, state, transform)
   }
 
-  // 4. Planet
+  // 5. Planet
   drawPlanet(ctx, state, transform)
 
-  // 5. Satellite
+  // 6. Satellite
   drawSatellite(ctx, state, transform)
 
-  // 6. Vectors
+  // 7. Vectors
   if (showVectors) {
     drawVectors(ctx, state, transform)
   }
 
-  // 7. Crash effect
+  // 8. Crash effect
   if (state.crashed) {
     drawCrashEffect(ctx, width, height)
   }
 
-  // 8. HUD
+  // 9. HUD
   drawHud(ctx, state, width, showMetrics)
+
+  // 10. Zoom info
+  drawZoomControls(ctx, height)
 }

@@ -158,4 +158,4 @@ export {
   checkGeostationary,
 } from './physics.ts'
 export type { OrbitalState, OrbitalParams } from './physics.ts'
-export { renderOrbitLab } from './renderer.ts'
+export { renderOrbitLab, resetOrbitLabCamera } from './renderer.ts'

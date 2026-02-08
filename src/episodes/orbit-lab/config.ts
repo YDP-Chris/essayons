@@ -64,6 +64,20 @@ export const orbitLabConfig: EpisodeConfig = {
       default: true,
       description: 'Display expanded orbital metrics (eccentricity, apogee, perigee, energy)',
     },
+    {
+      id: 'show-grid',
+      label: 'Altitude Grid',
+      type: 'boolean',
+      default: true,
+      description: 'Display altitude reference rings (Surface, LEO, GEO)',
+    },
+    {
+      id: 'follow',
+      label: 'Follow Satellite',
+      type: 'boolean',
+      default: false,
+      description: 'Camera tracks the satellite',
+    },
   ],
   equations: [
     {

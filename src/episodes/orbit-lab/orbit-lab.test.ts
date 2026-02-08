@@ -368,7 +368,7 @@ describe('Orbit Lab Physics', () => {
       expect(finalState.trail.length).toBeGreaterThan(1)
     })
 
-    it('should cap trail at 500 points', () => {
+    it('should cap trail at 2500 points', () => {
       const state = createInitialState(defaultParams)
       const params = { ...defaultParams, 'show-trail': true }
 
@@ -382,9 +382,9 @@ describe('Orbit Lab Physics', () => {
         'launch-speed': vCircular,
       }
 
-      const finalState = simulate(state, circularParams, 1 / 60, 1000)
+      const finalState = simulate(state, circularParams, 1 / 60, 5000)
 
-      expect(finalState.trail.length).toBeLessThanOrEqual(500)
+      expect(finalState.trail.length).toBeLessThanOrEqual(2500)
     })
 
     it('should not record trail when show-trail is false', () => {
@@ -702,8 +702,8 @@ describe('Orbit Lab Config', () => {
     expect(orbitLabConfig.simulationMode).toBe('continuous')
   })
 
-  it('should have 6 parameters', () => {
-    expect(orbitLabConfig.parameters).toHaveLength(6)
+  it('should have 8 parameters', () => {
+    expect(orbitLabConfig.parameters).toHaveLength(8)
   })
 
   it('should have 3 equations', () => {
