@@ -10,7 +10,7 @@
 import type { Subscribable, Unsubscribe } from './types.ts'
 
 /** Allowed speed multiplier presets. */
-export const SPEED_PRESETS = [1, 2, 5, 10, 50, 100, 500, 1000] as const
+export const SPEED_PRESETS = [1, 2, 5, 10, 50, 100, 500, 1000, 5000, 10000] as const
 export type SpeedPreset = (typeof SPEED_PRESETS)[number]
 
 /** Snapshot of time controller state for external consumers. */
@@ -70,9 +70,9 @@ export class TimeController implements Subscribable<TimeControlState> {
     this._notify()
   }
 
-  /** Set the speed multiplier. Clamped to [1, 1000]. */
+  /** Set the speed multiplier. Clamped to [1, 10000]. */
   setSpeed(multiplier: number): void {
-    const clamped = Math.max(1, Math.min(1000, multiplier))
+    const clamped = Math.max(1, Math.min(10000, multiplier))
     if (clamped !== this._speedMultiplier) {
       this._speedMultiplier = clamped
       this._notify()
