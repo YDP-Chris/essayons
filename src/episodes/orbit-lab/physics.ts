@@ -19,6 +19,26 @@ export const EARTH_RADIUS = 6.371e6
 /** Maximum number of trail points before oldest are discarded */
 const MAX_TRAIL_POINTS = 10000
 
+// ---------------------------------------------------------------------------
+// Planet Presets (real data)
+// ---------------------------------------------------------------------------
+
+export interface PlanetPreset {
+  readonly name: string
+  readonly mass: number
+  readonly radius: number
+}
+
+/** Real mass and radius for selectable planets. */
+export const PLANET_PRESETS: Readonly<Record<string, PlanetPreset>> = {
+  Moon: { name: 'Moon', mass: 7.342e22, radius: 1.7371e6 },
+  Mars: { name: 'Mars', mass: 6.417e23, radius: 3.3895e6 },
+  Earth: { name: 'Earth', mass: 5.972e24, radius: 6.371e6 },
+  Venus: { name: 'Venus', mass: 4.867e24, radius: 6.0518e6 },
+  Jupiter: { name: 'Jupiter', mass: 1.898e27, radius: 6.9911e7 },
+  Saturn: { name: 'Saturn', mass: 5.683e26, radius: 5.8232e7 },
+}
+
 /** Seconds of orbital period for geostationary orbit */
 const GEO_PERIOD = 86400
 
@@ -68,7 +88,7 @@ export interface OrbitalState {
 }
 
 export interface OrbitalParams {
-  readonly 'planet-mass': number
+  readonly planet: string
   readonly 'launch-speed': number
   readonly 'launch-angle': number
   readonly 'show-trail': boolean
@@ -119,11 +139,12 @@ function gravitationalAcceleration(
  * fires tangentially — the direction needed for orbit.
  */
 export function createInitialState(params: Record<string, unknown>): OrbitalState {
-  const planetMass = (params['planet-mass'] as number | undefined) ?? 5.972e24
+  const planetKey = (params['planet'] as string | undefined) ?? 'Earth'
+  const preset = PLANET_PRESETS[planetKey] ?? PLANET_PRESETS['Earth']!
+  const planetMass = preset.mass
+  const planetRadius = preset.radius
   const launchSpeed = (params['launch-speed'] as number | undefined) ?? 7500
   const launchAngleDeg = (params['launch-angle'] as number | undefined) ?? 0
-
-  const planetRadius = EARTH_RADIUS
 
   // Satellite starts on the planet surface (positive x-axis, just above the radius)
   const satX = planetRadius + 1000 // 1km above surface to avoid immediate collision
@@ -203,11 +224,14 @@ export function updateOrbitalState(
     return { ...state, simTime: state.simTime + dt }
   }
 
-  const planetMass = (params['planet-mass'] as number | undefined) ?? state.planet.mass
+  const planetKey = (params['planet'] as string | undefined) ?? 'Earth'
+  const preset = PLANET_PRESETS[planetKey] ?? PLANET_PRESETS['Earth']!
 
-  // Update planet mass if it changed
+  // Update planet if preset changed
   const planet: Planet =
-    planetMass !== state.planet.mass ? { ...state.planet, mass: planetMass } : state.planet
+    preset.mass !== state.planet.mass || preset.radius !== state.planet.radius
+      ? { ...state.planet, mass: preset.mass, radius: preset.radius }
+      : state.planet
 
   const { x, y, vx, vy } = state.satellite
 

@@ -28,7 +28,7 @@ import { validateConfig } from '../validate-config.ts'
 
 /** Default params matching the config defaults */
 const defaultParams: Record<string, unknown> = {
-  'planet-mass': 5.972e24,
+  planet: 'Earth',
   'launch-speed': 7500,
   'launch-angle': 80,
   'show-trail': true,
@@ -127,10 +127,11 @@ describe('Orbit Lab Physics', () => {
       expect(Math.abs(state90.satellite.vx)).toBeLessThan(1)
     })
 
-    it('should set planet mass from parameters', () => {
-      const params = { ...defaultParams, 'planet-mass': 1e25 }
+    it('should set planet mass from planet preset', () => {
+      const params = { ...defaultParams, planet: 'Jupiter' }
       const state = createInitialState(params)
-      expect(state.planet.mass).toBe(1e25)
+      expect(state.planet.mass).toBe(1.898e27)
+      expect(state.planet.radius).toBe(6.9911e7)
     })
   })
 
@@ -229,11 +230,12 @@ describe('Orbit Lab Physics', () => {
       expect(Math.abs(finalState.totalAngle)).toBeGreaterThan(0)
     })
 
-    it('should update planet mass when parameter changes', () => {
+    it('should update planet when preset changes', () => {
       const state = createInitialState(defaultParams)
-      const newParams = { ...defaultParams, 'planet-mass': 1e25 }
+      const newParams = { ...defaultParams, planet: 'Mars' }
       const next = updateOrbitalState(state, newParams, 1 / 60)
-      expect(next.planet.mass).toBe(1e25)
+      expect(next.planet.mass).toBe(6.417e23)
+      expect(next.planet.radius).toBe(3.3895e6)
     })
   })
 

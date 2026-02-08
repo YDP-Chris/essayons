@@ -6,7 +6,7 @@
  * twinkling stars, orbit projection, rocket ship, and telemetry HUD.
  */
 
-import { EARTH_RADIUS, G } from './physics.ts'
+import { G } from './physics.ts'
 import type { OrbitalState } from './physics.ts'
 
 // ---------------------------------------------------------------------------
@@ -17,16 +17,88 @@ const VECTOR_SCALE = 0.00004
 const TRAIL_LINE_WIDTH = 1.5
 const PROJECTION_STEPS = 360
 
-/** Altitude grid rings: [altitude in meters, label, color, lineWidth] */
-const GRID_RINGS: Array<[number, string, string, number]> = [
-  [0, 'Surface', 'rgba(100,180,255,0.12)', 1],
-  [100_000, 'Atmo', 'rgba(255,255,255,0.04)', 0.5],
-  [400_000, 'LEO', 'rgba(255,255,255,0.04)', 0.5],
-  [1_000_000, '1000km', 'rgba(255,255,255,0.04)', 0.5],
-  [2_000_000, '2000km', 'rgba(255,255,255,0.04)', 0.5],
-  [5_000_000, '5000km', 'rgba(255,255,255,0.04)', 0.5],
-  [35_786_000, 'GEO', 'rgba(255,255,255,0.04)', 0.5],
-]
+// ---------------------------------------------------------------------------
+// Planet Visual Profiles
+// ---------------------------------------------------------------------------
+
+interface PlanetVisual {
+  readonly bodyColors: [string, string, string] // gradient: highlight, mid, shadow
+  readonly atmoColor: string // atmosphere glow tint
+  readonly hasRings: boolean
+  readonly hasBands: boolean
+  readonly bandColor: string
+  readonly hasCraters: boolean
+}
+
+const PLANET_VISUALS: Readonly<Record<string, PlanetVisual>> = {
+  Moon: {
+    bodyColors: ['#d4d4d4', '#a0a0a0', '#606060'],
+    atmoColor: 'rgba(200,200,200,0.03)',
+    hasRings: false,
+    hasBands: false,
+    bandColor: '',
+    hasCraters: true,
+  },
+  Mars: {
+    bodyColors: ['#e8845a', '#c4522a', '#6b2010'],
+    atmoColor: 'rgba(230,140,80,0.06)',
+    hasRings: false,
+    hasBands: false,
+    bandColor: '',
+    hasCraters: false,
+  },
+  Earth: {
+    bodyColors: ['#2196F3', '#1565C0', '#0a2744'],
+    atmoColor: 'rgba(60,160,255,0.08)',
+    hasRings: false,
+    hasBands: false,
+    bandColor: '',
+    hasCraters: false,
+  },
+  Venus: {
+    bodyColors: ['#f5e6b8', '#d4a843', '#8a6b20'],
+    atmoColor: 'rgba(245,220,160,0.12)',
+    hasRings: false,
+    hasBands: false,
+    bandColor: '',
+    hasCraters: false,
+  },
+  Jupiter: {
+    bodyColors: ['#e8c88a', '#c49a5a', '#7a5530'],
+    atmoColor: 'rgba(200,160,100,0.06)',
+    hasRings: false,
+    hasBands: true,
+    bandColor: '#b87a40',
+    hasCraters: false,
+  },
+  Saturn: {
+    bodyColors: ['#f0d898', '#d4b060', '#8a7030'],
+    atmoColor: 'rgba(220,190,120,0.06)',
+    hasRings: true,
+    hasBands: true,
+    bandColor: '#c8a050',
+    hasCraters: false,
+  },
+}
+
+/** Generate altitude grid rings relative to planet radius. */
+function computeGridRings(planetRadius: number): Array<[number, string, string, number]> {
+  const fmt = (m: number): string => {
+    if (m >= 1_000_000) return `${(m / 1_000_000).toFixed(m >= 10_000_000 ? 0 : 1)}k km`
+    if (m >= 1_000) return `${(m / 1_000).toFixed(0)} km`
+    return `${m.toFixed(0)} m`
+  }
+  const R = planetRadius
+  return [
+    [0, 'Surface', 'rgba(100,200,255,0.25)', 1.5],
+    [R * 0.015, fmt(R * 0.015), 'rgba(255,255,255,0.10)', 0.5],
+    [R * 0.06, fmt(R * 0.06), 'rgba(255,255,255,0.10)', 0.5],
+    [R * 0.15, fmt(R * 0.15), 'rgba(255,255,255,0.10)', 0.5],
+    [R * 0.5, fmt(R * 0.5), 'rgba(255,255,255,0.10)', 0.5],
+    [R * 1.0, fmt(R * 1.0), 'rgba(255,255,255,0.10)', 0.5],
+    [R * 3.0, fmt(R * 3.0), 'rgba(255,255,255,0.08)', 0.5],
+  ]
+}
 
 // ---------------------------------------------------------------------------
 // Colors
@@ -56,6 +128,7 @@ let _dragStartY = 0
 let _camStartX = 0
 let _camStartY = 0
 let _attachedCanvas: HTMLCanvasElement | null = null
+let _currentPlanetRadius = 6.371e6 // updated each frame from state
 
 // Deterministic star field (generated once)
 const _stars: Array<{
@@ -136,7 +209,7 @@ function onMouseMove(e: MouseEvent): void {
   if (!_dragging || !_attachedCanvas) return
   const w = _attachedCanvas.clientWidth
   const h = _attachedCanvas.clientHeight
-  const bsc = Math.min(w, h) / (EARTH_RADIUS * 6)
+  const bsc = Math.min(w, h) / (_currentPlanetRadius * 6)
   const sc = bsc * _zoom
   _camX = _camStartX + (e.clientX - _dragStartX) / sc
   _camY = _camStartY - (e.clientY - _dragStartY) / sc
@@ -168,7 +241,7 @@ function onTouchMove(e: TouchEvent): void {
   if (e.touches.length === 1 && _dragging && _attachedCanvas) {
     const w = _attachedCanvas.clientWidth
     const h = _attachedCanvas.clientHeight
-    const bsc = Math.min(w, h) / (EARTH_RADIUS * 6)
+    const bsc = Math.min(w, h) / (_currentPlanetRadius * 6)
     const sc = bsc * _zoom
     _camX = _camStartX + (e.touches[0]!.clientX - _dragStartX) / sc
     _camY = _camStartY - (e.touches[0]!.clientY - _dragStartY) / sc
@@ -257,11 +330,11 @@ function drawAltitudeGrid(
   transform: ViewTransform,
 ): void {
   const center = worldToScreen(state.planet.x, state.planet.y, transform)
+  const rings = computeGridRings(state.planet.radius)
 
-  ctx.font = '9px monospace'
   ctx.textAlign = 'left'
 
-  for (const [alt, label, color, lineWidth] of GRID_RINGS) {
+  for (const [alt, label, color, lineWidth] of rings) {
     const radius = (state.planet.radius + alt) * transform.scale
     if (radius < 5) continue
 
@@ -273,9 +346,14 @@ function drawAltitudeGrid(
     ctx.stroke()
     ctx.setLineDash([])
 
-    if (radius > 30) {
-      ctx.fillStyle = 'rgba(255,255,255,0.1)'
-      ctx.fillText(label, center.sx + radius + 4, center.sy - 2)
+    if (radius > 25) {
+      // Draw label with background for readability
+      ctx.font = '11px monospace'
+      const textWidth = ctx.measureText(label).width
+      ctx.fillStyle = 'rgba(0,0,0,0.5)'
+      ctx.fillRect(center.sx + radius + 2, center.sy - 12, textWidth + 6, 16)
+      ctx.fillStyle = 'rgba(255,255,255,0.45)'
+      ctx.fillText(label, center.sx + radius + 5, center.sy)
     }
   }
 }
@@ -377,13 +455,15 @@ function drawPlanet(
   ctx: CanvasRenderingContext2D,
   state: OrbitalState,
   transform: ViewTransform,
+  planetName: string,
 ): void {
   const { planet } = state
   const center = worldToScreen(planet.x, planet.y, transform)
   const displayRadius = transform.planetScreenRadius
+  const vis = PLANET_VISUALS[planetName] ?? PLANET_VISUALS['Earth']!
 
   // Atmosphere glow
-  const atmoRadius = (planet.radius + 300_000) * transform.scale
+  const atmoRadius = displayRadius * 1.15
   const atmosphereGradient = ctx.createRadialGradient(
     center.sx,
     center.sy,
@@ -392,13 +472,30 @@ function drawPlanet(
     center.sy,
     atmoRadius,
   )
-  atmosphereGradient.addColorStop(0, 'rgba(60,160,255,0)')
-  atmosphereGradient.addColorStop(0.5, 'rgba(60,160,255,0.04)')
-  atmosphereGradient.addColorStop(1, 'rgba(60,160,255,0)')
+  atmosphereGradient.addColorStop(0, 'rgba(0,0,0,0)')
+  atmosphereGradient.addColorStop(0.5, vis.atmoColor)
+  atmosphereGradient.addColorStop(1, 'rgba(0,0,0,0)')
   ctx.fillStyle = atmosphereGradient
   ctx.beginPath()
   ctx.arc(center.sx, center.sy, atmoRadius, 0, 2 * Math.PI)
   ctx.fill()
+
+  // Saturn rings (behind planet body)
+  if (vis.hasRings && displayRadius > 4) {
+    ctx.save()
+    ctx.beginPath()
+    ctx.ellipse(center.sx, center.sy, displayRadius * 2.2, displayRadius * 0.5, -0.15, 0, Math.PI)
+    ctx.strokeStyle = 'rgba(210,190,140,0.35)'
+    ctx.lineWidth = Math.max(2, displayRadius * 0.15)
+    ctx.stroke()
+    // Inner ring
+    ctx.beginPath()
+    ctx.ellipse(center.sx, center.sy, displayRadius * 1.7, displayRadius * 0.4, -0.15, 0, Math.PI)
+    ctx.strokeStyle = 'rgba(190,170,120,0.25)'
+    ctx.lineWidth = Math.max(1, displayRadius * 0.08)
+    ctx.stroke()
+    ctx.restore()
+  }
 
   // Planet body
   const bodyGradient = ctx.createRadialGradient(
@@ -409,16 +506,212 @@ function drawPlanet(
     center.sy,
     displayRadius,
   )
-  bodyGradient.addColorStop(0, '#2196F3')
-  bodyGradient.addColorStop(0.5, '#1565C0')
-  bodyGradient.addColorStop(1, '#0a2744')
+  bodyGradient.addColorStop(0, vis.bodyColors[0])
+  bodyGradient.addColorStop(0.5, vis.bodyColors[1])
+  bodyGradient.addColorStop(1, vis.bodyColors[2])
   ctx.fillStyle = bodyGradient
   ctx.beginPath()
   ctx.arc(center.sx, center.sy, displayRadius, 0, 2 * Math.PI)
   ctx.fill()
 
-  // Atmosphere edge
-  const atmoEdge = (planet.radius + 100_000) * transform.scale
+  // Jupiter/Saturn horizontal bands
+  if (vis.hasBands && displayRadius > 8) {
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(center.sx, center.sy, displayRadius, 0, 2 * Math.PI)
+    ctx.clip()
+    const bandCount = 6
+    for (let i = 0; i < bandCount; i++) {
+      const yOff = ((i / bandCount) * 2 - 1) * displayRadius * 0.9
+      const bandH = displayRadius * 0.12
+      ctx.fillStyle = i % 2 === 0 ? `rgba(0,0,0,0.12)` : `rgba(255,255,255,0.06)`
+      ctx.fillRect(
+        center.sx - displayRadius,
+        center.sy + yOff - bandH / 2,
+        displayRadius * 2,
+        bandH,
+      )
+    }
+    ctx.restore()
+  }
+
+  // Moon craters
+  if (vis.hasCraters && displayRadius > 10) {
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(center.sx, center.sy, displayRadius, 0, 2 * Math.PI)
+    ctx.clip()
+    const craters = [
+      [0.25, -0.3, 0.12],
+      [-0.35, 0.15, 0.08],
+      [0.1, 0.35, 0.06],
+      [-0.15, -0.2, 0.1],
+      [0.4, 0.1, 0.05],
+    ]
+    for (const [cx, cy, cr] of craters) {
+      ctx.beginPath()
+      ctx.arc(
+        center.sx + cx! * displayRadius,
+        center.sy + cy! * displayRadius,
+        cr! * displayRadius,
+        0,
+        2 * Math.PI,
+      )
+      ctx.fillStyle = 'rgba(0,0,0,0.15)'
+      ctx.fill()
+      ctx.strokeStyle = 'rgba(0,0,0,0.08)'
+      ctx.lineWidth = 1
+      ctx.stroke()
+    }
+    ctx.restore()
+  }
+
+  // Earth continents (green landmasses)
+  if (planetName === 'Earth' && displayRadius > 10) {
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(center.sx, center.sy, displayRadius, 0, 2 * Math.PI)
+    ctx.clip()
+    const landmasses = [
+      [-0.1, -0.25, 0.22, 0.18],
+      [0.2, -0.05, 0.15, 0.12],
+      [-0.3, 0.15, 0.18, 0.1],
+      [0.35, 0.25, 0.1, 0.1],
+    ]
+    for (const [lx, ly, lw, lh] of landmasses) {
+      ctx.beginPath()
+      ctx.ellipse(
+        center.sx + lx! * displayRadius,
+        center.sy + ly! * displayRadius,
+        lw! * displayRadius,
+        lh! * displayRadius,
+        0.3,
+        0,
+        2 * Math.PI,
+      )
+      ctx.fillStyle = 'rgba(34,139,34,0.25)'
+      ctx.fill()
+    }
+    // Cloud wisps
+    ctx.globalAlpha = 0.15
+    ctx.fillStyle = '#fff'
+    ctx.beginPath()
+    ctx.ellipse(
+      center.sx + displayRadius * 0.15,
+      center.sy - displayRadius * 0.1,
+      displayRadius * 0.35,
+      displayRadius * 0.06,
+      0.2,
+      0,
+      2 * Math.PI,
+    )
+    ctx.fill()
+    ctx.beginPath()
+    ctx.ellipse(
+      center.sx - displayRadius * 0.2,
+      center.sy + displayRadius * 0.3,
+      displayRadius * 0.25,
+      displayRadius * 0.05,
+      -0.3,
+      0,
+      2 * Math.PI,
+    )
+    ctx.fill()
+    ctx.globalAlpha = 1
+    ctx.restore()
+  }
+
+  // Venus thick atmosphere swirl
+  if (planetName === 'Venus' && displayRadius > 10) {
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(center.sx, center.sy, displayRadius, 0, 2 * Math.PI)
+    ctx.clip()
+    ctx.globalAlpha = 0.15
+    ctx.fillStyle = '#fff'
+    for (let i = 0; i < 4; i++) {
+      ctx.beginPath()
+      ctx.ellipse(
+        center.sx + Math.sin(i * 1.5) * displayRadius * 0.3,
+        center.sy + (i / 4 - 0.5) * displayRadius * 1.2,
+        displayRadius * 0.6,
+        displayRadius * 0.08,
+        i * 0.2,
+        0,
+        2 * Math.PI,
+      )
+      ctx.fill()
+    }
+    ctx.globalAlpha = 1
+    ctx.restore()
+  }
+
+  // Mars polar ice caps
+  if (planetName === 'Mars' && displayRadius > 10) {
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(center.sx, center.sy, displayRadius, 0, 2 * Math.PI)
+    ctx.clip()
+    ctx.fillStyle = 'rgba(255,255,255,0.3)'
+    ctx.beginPath()
+    ctx.ellipse(
+      center.sx,
+      center.sy - displayRadius * 0.85,
+      displayRadius * 0.35,
+      displayRadius * 0.12,
+      0,
+      0,
+      2 * Math.PI,
+    )
+    ctx.fill()
+    ctx.beginPath()
+    ctx.ellipse(
+      center.sx,
+      center.sy + displayRadius * 0.88,
+      displayRadius * 0.28,
+      displayRadius * 0.09,
+      0,
+      0,
+      2 * Math.PI,
+    )
+    ctx.fill()
+    ctx.restore()
+  }
+
+  // Saturn rings (in front of planet body — top half)
+  if (vis.hasRings && displayRadius > 4) {
+    ctx.save()
+    ctx.beginPath()
+    ctx.ellipse(
+      center.sx,
+      center.sy,
+      displayRadius * 2.2,
+      displayRadius * 0.5,
+      -0.15,
+      Math.PI,
+      2 * Math.PI,
+    )
+    ctx.strokeStyle = 'rgba(210,190,140,0.35)'
+    ctx.lineWidth = Math.max(2, displayRadius * 0.15)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.ellipse(
+      center.sx,
+      center.sy,
+      displayRadius * 1.7,
+      displayRadius * 0.4,
+      -0.15,
+      Math.PI,
+      2 * Math.PI,
+    )
+    ctx.strokeStyle = 'rgba(190,170,120,0.25)'
+    ctx.lineWidth = Math.max(1, displayRadius * 0.08)
+    ctx.stroke()
+    ctx.restore()
+  }
+
+  // Atmosphere edge glow
+  const atmoEdge = displayRadius * 1.05
   const edgeGradient = ctx.createRadialGradient(
     center.sx,
     center.sy,
@@ -427,12 +720,20 @@ function drawPlanet(
     center.sy,
     atmoEdge,
   )
-  edgeGradient.addColorStop(0, 'rgba(100,200,255,0.15)')
-  edgeGradient.addColorStop(1, 'rgba(100,200,255,0)')
+  edgeGradient.addColorStop(0, vis.atmoColor)
+  edgeGradient.addColorStop(1, 'rgba(0,0,0,0)')
   ctx.fillStyle = edgeGradient
   ctx.beginPath()
   ctx.arc(center.sx, center.sy, atmoEdge, 0, 2 * Math.PI)
   ctx.fill()
+
+  // Planet name label
+  if (displayRadius > 20) {
+    ctx.font = 'bold 12px monospace'
+    ctx.textAlign = 'center'
+    ctx.fillStyle = 'rgba(255,255,255,0.4)'
+    ctx.fillText(planetName, center.sx, center.sy + displayRadius + 16)
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -758,6 +1059,7 @@ function drawHud(
   state: OrbitalState,
   width: number,
   showMetrics: boolean,
+  planetName: string,
 ): void {
   const { satellite, planet } = state
   const dist = Math.sqrt((satellite.x - planet.x) ** 2 + (satellite.y - planet.y) ** 2)
@@ -768,6 +1070,7 @@ function drawHud(
   ctx.textAlign = 'right'
 
   const lines: Array<{ text: string; color?: string }> = [
+    { text: `${planetName}`, color: '#88aacc' },
     { text: `Alt: ${(altitude / 1000).toFixed(1)} km` },
     { text: `Vel: ${speed.toFixed(0)} m/s` },
     { text: `Orbits: ${state.orbitsCompleted}` },
@@ -846,12 +1149,14 @@ export function renderOrbitLab(
   height: number,
 ): void {
   attachInteractions(ctx.canvas)
+  _currentPlanetRadius = state.planet.radius
 
   const showTrail = (params['show-trail'] as boolean | undefined) ?? true
   const showVectors = (params['show-vectors'] as boolean | undefined) ?? false
   const showMetrics = (params['show-metrics'] as boolean | undefined) ?? true
   const showGrid = (params['show-grid'] as boolean | undefined) ?? true
   const follow = (params['follow'] as boolean | undefined) ?? false
+  const planetName = (params['planet'] as string | undefined) ?? 'Earth'
 
   const transform = computeViewTransform(state, width, height, follow)
 
@@ -877,7 +1182,7 @@ export function renderOrbitLab(
   }
 
   // 6. Planet
-  drawPlanet(ctx, state, transform)
+  drawPlanet(ctx, state, transform, planetName)
 
   // 7. Rocket
   drawRocket(ctx, state, transform)
@@ -893,7 +1198,7 @@ export function renderOrbitLab(
   }
 
   // 10. HUD
-  drawHud(ctx, state, width, showMetrics)
+  drawHud(ctx, state, width, showMetrics, planetName)
 
   // 11. Zoom info
   drawZoomControls(ctx, height)

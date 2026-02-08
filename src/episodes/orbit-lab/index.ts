@@ -68,6 +68,14 @@ export const orbitLabDefinition: EpisodeDefinition = {
           label: p.label,
           default: p.default as boolean,
         }
+      case 'enum':
+        return {
+          type: 'enum' as const,
+          key: p.id,
+          label: p.label,
+          options: (p.options ?? []).map((o) => ({ value: o, label: o })),
+          default: p.default as string,
+        }
       default:
         return {
           type: 'boolean' as const,
@@ -119,7 +127,7 @@ export const orbitLabDefinition: EpisodeDefinition = {
 
   createInitialState: (): PhysicsState => {
     return createInitialState({
-      'planet-mass': 5.972e24,
+      planet: 'Earth',
       'launch-speed': 7500,
       'launch-angle': 80,
     }) as unknown as PhysicsState
@@ -156,6 +164,7 @@ export {
   checkCrash,
   checkEscape,
   checkGeostationary,
+  PLANET_PRESETS,
 } from './physics.ts'
-export type { OrbitalState, OrbitalParams } from './physics.ts'
+export type { OrbitalState, OrbitalParams, PlanetPreset } from './physics.ts'
 export { renderOrbitLab, resetOrbitLabCamera } from './renderer.ts'
