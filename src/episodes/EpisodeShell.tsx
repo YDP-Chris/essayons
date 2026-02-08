@@ -41,6 +41,7 @@ import {
 import { OnboardingTutorial } from '@/features/onboarding/OnboardingTutorial.tsx'
 import type { UseTutorialReturn } from '@/features/onboarding/use-tutorial.ts'
 import { AriaLiveRegion } from '@/shared/accessibility/AriaLiveRegion.tsx'
+import { useTranslation } from '@/i18n'
 import './EpisodeShell.css'
 
 // ---------------------------------------------------------------------------
@@ -162,6 +163,7 @@ function domainAccentColor(domain: string): string {
 
 export function EpisodeShell({ episodeId, tutorial }: EpisodeShellProps) {
   const config = getEpisode(episodeId)
+  const { t } = useTranslation()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [activeMissionIndex, setActiveMissionIndex] = useState(0)
 
@@ -214,6 +216,10 @@ export function EpisodeShell({ episodeId, tutorial }: EpisodeShellProps) {
     // Even event-driven and step-based episodes need the rAF loop
     // running so the canvas renderer draws each frame.
     engine.start()
+
+    // Start paused so the user can explore parameters and read the
+    // mission briefing before the simulation begins running.
+    engine.time.pause()
 
     return () => {
       engine.stop()
@@ -298,6 +304,10 @@ export function EpisodeShell({ episodeId, tutorial }: EpisodeShellProps) {
   const handleReset = useCallback(() => {
     if (!engine || !config) return
     engine.reset()
+    // Restart render loop but keep paused so the user can adjust
+    // parameters before running the simulation again.
+    engine.start()
+    engine.time.pause()
     setActiveMissionIndex(0)
     trackSimulationInteraction('reset', config.id)
   }, [engine, config])
@@ -318,18 +328,18 @@ export function EpisodeShell({ episodeId, tutorial }: EpisodeShellProps) {
   // ---- Simulation status message for screen readers ----
   const simulationStatus = useMemo(() => {
     const phase = state.missionState.phase
-    if (phase === 'success') return 'Mission completed successfully.'
-    if (phase === 'failed') return 'Mission failed.'
-    if (state.running && !state.paused) return 'Simulation running.'
-    if (state.paused) return 'Simulation paused.'
-    return 'Simulation ready.'
-  }, [state.missionState.phase, state.running, state.paused])
+    if (phase === 'success') return t('simulation.missionCompleted')
+    if (phase === 'failed') return t('simulation.missionFailed')
+    if (state.running && !state.paused) return t('simulation.running')
+    if (state.paused) return t('simulation.paused')
+    return t('simulation.ready')
+  }, [state.missionState.phase, state.running, state.paused, t])
 
   // ---- Render ----
   if (!config) {
     return (
       <div className="episode-shell episode-shell--error">
-        <p>Episode not found: {episodeId}</p>
+        <p>{t('simulation.episodeNotFound').replace('{id}', episodeId)}</p>
       </div>
     )
   }
@@ -346,24 +356,39 @@ export function EpisodeShell({ episodeId, tutorial }: EpisodeShellProps) {
           {isSmallScreen && (
             <>
               <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(true)}>
-                Parameters
+                {t('panels.parameters')}
               </Button>
               <Button variant="ghost" size="sm" onClick={() => setReferenceOpen(true)}>
-                Reference
+                {t('panels.reference')}
               </Button>
             </>
           )}
           {state.paused || !state.running ? (
-            <Button variant="domain" size="sm" onClick={handlePlay} aria-label="Play simulation">
-              Play
+            <Button
+              variant="domain"
+              size="sm"
+              onClick={handlePlay}
+              aria-label={t('simulation.playSimulation')}
+            >
+              {t('simulation.play')}
             </Button>
           ) : (
-            <Button variant="domain" size="sm" onClick={handlePause} aria-label="Pause simulation">
-              Pause
+            <Button
+              variant="domain"
+              size="sm"
+              onClick={handlePause}
+              aria-label={t('simulation.pauseSimulation')}
+            >
+              {t('simulation.pause')}
             </Button>
           )}
-          <Button variant="ghost" size="sm" onClick={handleReset} aria-label="Reset simulation">
-            Reset
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleReset}
+            aria-label={t('simulation.resetSimulation')}
+          >
+            {t('simulation.reset')}
           </Button>
         </div>
       </header>
@@ -382,7 +407,11 @@ export function EpisodeShell({ episodeId, tutorial }: EpisodeShellProps) {
 
         {/* Sidebar */}
         {isSmallScreen ? (
-          <Drawer open={sidebarOpen} onClose={() => setSidebarOpen(false)} title="Parameters">
+          <Drawer
+            open={sidebarOpen}
+            onClose={() => setSidebarOpen(false)}
+            title={t('panels.parameters')}
+          >
             <ParameterPanel
               parameters={config.parameters}
               values={state.params}
@@ -420,7 +449,7 @@ export function EpisodeShell({ episodeId, tutorial }: EpisodeShellProps) {
           <BottomSheet
             open={referenceOpen}
             onClose={() => setReferenceOpen(false)}
-            title="Reference"
+            title={t('panels.reference')}
           >
             <ReferencePanel references={config.referenceContent} />
           </BottomSheet>

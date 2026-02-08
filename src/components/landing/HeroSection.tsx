@@ -1,18 +1,18 @@
 import { Button } from '@/components/ui/Button'
 import { DomainOrbit } from '@/components/DomainOrbit'
+import { useTranslation } from '@/i18n'
 import './HeroSection.css'
 
 export function HeroSection() {
+  const { t } = useTranslation()
+
   return (
     <section className="hero" aria-labelledby="hero-headline">
       <DomainOrbit />
       <h1 id="hero-headline" className="hero-headline">
-        Learn by crashing into things.
+        {t('hero.headline')}
       </h1>
-      <p className="hero-subhead">
-        Interactive simulations that teach physics, civics, economics, history, and
-        more&mdash;through hands-on exploration.
-      </p>
+      <p className="hero-subhead">{t('hero.subheading')}</p>
       <Button
         variant="primary"
         size="lg"
@@ -21,7 +21,7 @@ export function HeroSection() {
           document.getElementById('episodes')?.scrollIntoView({ behavior: 'smooth' })
         }}
       >
-        Start Exploring
+        {t('hero.cta')}
       </Button>
     </section>
   )

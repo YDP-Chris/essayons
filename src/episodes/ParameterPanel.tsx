@@ -15,6 +15,7 @@ import type { ParameterConfig } from './types.ts'
 import { Slider } from '@/components/ui/Slider.tsx'
 import { Card } from '@/components/ui/Card.tsx'
 import { trackParameterChange } from '@/analytics/plausible.ts'
+import { useTranslation } from '@/i18n'
 import './ParameterPanel.css'
 
 // ---------------------------------------------------------------------------
@@ -204,13 +205,15 @@ export function ParameterPanel({
   episodeId,
   onParameterChange,
 }: ParameterPanelProps) {
+  const { t } = useTranslation()
+
   if (parameters.length === 0) {
     return null
   }
 
   return (
     <Card
-      header={<h2 className="parameter-panel__title">Parameters</h2>}
+      header={<h2 className="parameter-panel__title">{t('panels.parameters')}</h2>}
       className="parameter-panel"
     >
       <div className="parameter-panel__controls">

@@ -201,8 +201,8 @@
   .tutorial-tooltip {
     position: fixed;
     bottom: 0;
-    left: 0;
-    right: 0;
+    inset-inline-start: 0;
+    inset-inline-end: 0;
     top: auto;
     max-width: 100%;
     width: 100%;
@@ -213,7 +213,7 @@
 
   .tutorial-tooltip--center {
     top: auto;
-    left: 0;
+    inset-inline-start: 0;
     transform: none;
   }
 }

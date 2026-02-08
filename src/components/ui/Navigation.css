@@ -24,7 +24,7 @@
   font-weight: 400;
   color: var(--color-text-primary);
   text-decoration: none;
-  margin-right: var(--space-4);
+  margin-inline-end: var(--space-4);
 }
 
 .nav-items {
@@ -87,7 +87,7 @@
   }
 
   .nav-brand {
-    margin-right: 0;
+    margin-inline-end: 0;
     margin-bottom: var(--space-2);
   }
 }

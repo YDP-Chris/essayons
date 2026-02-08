@@ -67,7 +67,7 @@
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--color-text-primary);
-  text-align: left;
+  text-align: start;
   min-height: 44px;
   transition: background-color var(--transition-fast);
 }
@@ -83,7 +83,7 @@
 .reference-panel__item-chevron {
   font-size: 0.625rem;
   color: var(--color-text-muted);
-  margin-left: var(--space-2);
+  margin-inline-start: var(--space-2);
 }
 
 .reference-panel__item-body {

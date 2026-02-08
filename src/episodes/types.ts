@@ -41,6 +41,30 @@ export interface EpisodeConfig {
   readonly referenceContent: readonly ReferenceConfig[]
   readonly initialState: Record<string, unknown>
   readonly renderLayers: readonly RenderLayerConfig[]
+  readonly i18n?: Partial<Record<string, EpisodeI18nOverride>>
+}
+
+/** Locale-specific overrides for episode content. */
+export interface EpisodeI18nOverride {
+  readonly title?: string
+  readonly subtitle?: string
+  readonly description?: string
+  readonly missions?: readonly {
+    readonly id: string
+    readonly title?: string
+    readonly briefing?: string
+    readonly objectives?: readonly {
+      readonly id: string
+      readonly description?: string
+    }[]
+    readonly hints?: readonly string[]
+    readonly successMessage?: string
+  }[]
+  readonly referenceContent?: readonly {
+    readonly id: string
+    readonly title?: string
+    readonly content?: string
+  }[]
 }
 
 // ---------------------------------------------------------------------------

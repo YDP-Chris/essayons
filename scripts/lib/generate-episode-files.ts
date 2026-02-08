@@ -560,6 +560,41 @@ function toPascalCase(str: string): string {
 }
 
 /**
+ * Generate i18n stub JSON for a locale
+ */
+function generateI18nStub(input: EpisodeInput, locale: string): string {
+  const missions = (input.missions ?? []).map((m) => ({
+    id: m.id,
+    title: locale === 'en' ? m.title : `[${locale.toUpperCase()}] ${m.title}`,
+    briefing: locale === 'en' ? m.briefing : `[${locale.toUpperCase()}] ${m.briefing}`,
+    objectives: m.objectives.map((o) => ({
+      id: o.id,
+      description: locale === 'en' ? o.description : `[${locale.toUpperCase()}] ${o.description}`,
+    })),
+    hints: (m.hints ?? []).map((h) => (locale === 'en' ? h : `[${locale.toUpperCase()}] ${h}`)),
+    successMessage:
+      locale === 'en' ? m.successMessage : `[${locale.toUpperCase()}] ${m.successMessage}`,
+  }))
+
+  const referenceContent = (input.referenceContent ?? []).map((r) => ({
+    id: r.id,
+    title: locale === 'en' ? r.title : `[${locale.toUpperCase()}] ${r.title}`,
+    content: locale === 'en' ? r.content : `[${locale.toUpperCase()}] ${r.content}`,
+  }))
+
+  const stub = {
+    title: locale === 'en' ? input.title : `[${locale.toUpperCase()}] ${input.title}`,
+    subtitle: locale === 'en' ? input.subtitle : `[${locale.toUpperCase()}] ${input.subtitle}`,
+    description:
+      locale === 'en' ? input.description : `[${locale.toUpperCase()}] ${input.description}`,
+    missions,
+    referenceContent,
+  }
+
+  return JSON.stringify(stub, null, 2) + '\n'
+}
+
+/**
  * Generate all episode files and write to disk
  */
 export function generateEpisode(
@@ -570,13 +605,15 @@ export function generateEpisode(
 
   const stateFileName = input.simulationMode === 'continuous' ? 'physics.ts' : 'state-machine.ts'
 
-  const files = {
+  const files: Record<string, string> = {
     'config.ts': generateConfig(input),
     [stateFileName]:
       input.simulationMode === 'continuous' ? generatePhysics(input) : generateStateMachine(input),
     'renderer.ts': generateRenderer(input),
     'index.ts': generateIndex(input),
     [`${input.id}.test.ts`]: generateTest(input),
+    'i18n/en.json': generateI18nStub(input, 'en'),
+    'i18n/es.json': generateI18nStub(input, 'es'),
   }
 
   if (options.dryRun) {
@@ -595,6 +632,7 @@ export function generateEpisode(
   }
 
   mkdirSync(dir, { recursive: true })
+  mkdirSync(join(dir, 'i18n'), { recursive: true })
   for (const [name, content] of Object.entries(files)) {
     writeFileSync(join(dir, name), content, 'utf-8')
   }

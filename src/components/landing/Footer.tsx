@@ -1,6 +1,8 @@
+import { useTranslation } from '@/i18n'
 import './Footer.css'
 
 export function Footer() {
+  const { t } = useTranslation()
   const year = new Date().getFullYear()
 
   return (
@@ -8,8 +10,8 @@ export function Footer() {
       <p className="footer-brand">
         <em>E</em>ssayons.
       </p>
-      <p className="footer-tagline">Let us try.</p>
-      <p className="footer-copyright">&copy; {year} Essayons. All rights reserved.</p>
+      <p className="footer-tagline">{t('footer.tagline')}</p>
+      <p className="footer-copyright">{t('footer.copyright').replace('{year}', String(year))}</p>
     </footer>
   )
 }

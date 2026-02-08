@@ -7,6 +7,7 @@
 
 import { useState, useCallback } from 'react'
 import { navigate } from '@/shared/router/router.ts'
+import { useTranslation } from '@/i18n'
 import { LinkGenerator } from '@/components/teacher/LinkGenerator.tsx'
 import { SequenceBuilder } from '@/components/teacher/SequenceBuilder.tsx'
 import { ProgressViewer } from '@/components/teacher/ProgressViewer.tsx'
@@ -14,6 +15,7 @@ import { LessonPlanExport } from '@/components/teacher/LessonPlanExport.tsx'
 import './TeacherDashboard.css'
 
 export function TeacherDashboard() {
+  const { t } = useTranslation()
   const [sequence, setSequence] = useState<string[]>([])
 
   const handleSequenceChange = useCallback((newSequence: string[]) => {
@@ -23,14 +25,14 @@ export function TeacherDashboard() {
   return (
     <div className="teach-dashboard">
       <nav className="teach-dashboard__nav">
-        <span className="teach-dashboard__wordmark">Essayons</span>
+        <span className="teach-dashboard__wordmark">{t('teacherDashboard.wordmark')}</span>
         <button type="button" className="teach-dashboard__back" onClick={() => navigate('/')}>
-          &larr; Back to Labs
+          &larr; {t('nav.backToLabs')}
         </button>
       </nav>
 
       <main className="teach-dashboard__main">
-        <h1 className="teach-dashboard__title">Teacher Dashboard</h1>
+        <h1 className="teach-dashboard__title">{t('teacherDashboard.title')}</h1>
 
         <div className="teach-dashboard__grid">
           <div className="teach-dashboard__section">

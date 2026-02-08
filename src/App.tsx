@@ -10,6 +10,8 @@ import { PerformanceOverlay } from '@/dev/PerformanceOverlay'
 import { installMemoryMonitor } from '@/dev/memory-monitor'
 import { useTutorial } from '@/features/onboarding/use-tutorial.ts'
 import { resetTutorial } from '@/features/onboarding/tutorial-storage.ts'
+import { LocaleProvider, useTranslation } from '@/i18n'
+import { LocaleSwitcher } from '@/components/ui/LocaleSwitcher'
 
 // Install memory monitor in dev mode
 if (import.meta.env.DEV) {
@@ -22,6 +24,7 @@ if (import.meta.env.DEV) {
 
 function EpisodeRoute({ episodeId }: { readonly episodeId: string }) {
   const tutorial = useTutorial()
+  const { t } = useTranslation()
 
   const handleRestartTutorial = () => {
     resetTutorial()
@@ -33,14 +36,15 @@ function EpisodeRoute({ episodeId }: { readonly episodeId: string }) {
       {import.meta.env.DEV && <PerformanceOverlay />}
       <nav className="episode-nav">
         <button className="episode-nav__back" onClick={() => navigate('/')} type="button">
-          &larr; Back to Labs
+          &larr; {t('nav.backToLabs')}
         </button>
+        <LocaleSwitcher />
         <button
           className="episode-nav__restart-tutorial"
           onClick={handleRestartTutorial}
           type="button"
         >
-          Restart Tutorial
+          {t('nav.restartTutorial')}
         </button>
       </nav>
       <main id="main-content">
@@ -51,11 +55,12 @@ function EpisodeRoute({ episodeId }: { readonly episodeId: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// App
+// AppContent — inner component that uses hooks requiring LocaleProvider
 // ---------------------------------------------------------------------------
 
-export function App() {
+function AppContent() {
   const route = useRoute()
+  const { t } = useTranslation()
 
   if (route.route === 'teach') {
     return <TeacherDashboard />
@@ -69,8 +74,9 @@ export function App() {
     <div className="app">
       {import.meta.env.DEV && <PerformanceOverlay />}
       <a className="skip-to-content" href="#main-content">
-        Skip to content
+        {t('nav.skipToContent')}
       </a>
+      <LocaleSwitcher />
       <main id="main-content">
         <HeroSection />
         <EpisodeGrid onSelectEpisode={(id) => navigate(`/episode/${id}`)} />
@@ -79,5 +85,17 @@ export function App() {
       </main>
       <Footer />
     </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// App — wraps everything in LocaleProvider
+// ---------------------------------------------------------------------------
+
+export function App() {
+  return (
+    <LocaleProvider>
+      <AppContent />
+    </LocaleProvider>
   )
 }

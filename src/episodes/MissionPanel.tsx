@@ -14,6 +14,7 @@ import type { MissionConfig } from './types.ts'
 import type { MissionState, ObjectiveStatus } from '@/engine/types.ts'
 import { Card } from '@/components/ui/Card.tsx'
 import { Button } from '@/components/ui/Button.tsx'
+import { useTranslation } from '@/i18n'
 import './MissionPanel.css'
 
 // ---------------------------------------------------------------------------
@@ -63,6 +64,7 @@ export function MissionPanel({
   activeMissionIndex,
   onSelectMission,
 }: MissionPanelProps) {
+  const { t } = useTranslation()
   const [hintsRevealed, setHintsRevealed] = useState(0)
 
   const revealNextHint = useCallback(() => {
@@ -84,7 +86,10 @@ export function MissionPanel({
   const hasMoreHints = hintsRevealed < hints.length
 
   return (
-    <Card header={<h2 className="mission-panel__title">Mission</h2>} className="mission-panel">
+    <Card
+      header={<h2 className="mission-panel__title">{t('panels.mission')}</h2>}
+      className="mission-panel"
+    >
       {/* Mission selector (when multiple missions exist) */}
       {missions.length > 1 && (
         <nav className="mission-panel__selector" aria-label="Mission selector">
@@ -110,7 +115,7 @@ export function MissionPanel({
 
       {/* Objectives */}
       <div className="mission-panel__section">
-        <h3 className="mission-panel__section-heading">Objectives</h3>
+        <h3 className="mission-panel__section-heading">{t('panels.objectives')}</h3>
         <ul className="mission-panel__objectives">
           {activeMission.objectives.map((obj, idx) => {
             const liveObj = liveObjectives[idx]
@@ -131,7 +136,7 @@ export function MissionPanel({
       {/* Hints */}
       {hints.length > 0 && phase === 'active' && (
         <div className="mission-panel__section">
-          <h3 className="mission-panel__section-heading">Hints</h3>
+          <h3 className="mission-panel__section-heading">{t('panels.hints')}</h3>
           {visibleHints.length > 0 && (
             <ol className="mission-panel__hints">
               {visibleHints.map((hint, idx) => (
@@ -148,7 +153,9 @@ export function MissionPanel({
               className="mission-panel__hint-btn"
               onClick={revealNextHint}
             >
-              Show hint ({hintsRevealed + 1}/{hints.length})
+              {t('panels.showHint')
+                .replace('{current}', String(hintsRevealed + 1))
+                .replace('{total}', String(hints.length))}
             </Button>
           )}
         </div>
@@ -170,9 +177,7 @@ export function MissionPanel({
           <span className="mission-panel__result-icon" aria-hidden="true">
             {'\u2717'}
           </span>
-          <p className="mission-panel__result-text">
-            Mission failed. Adjust your parameters and try again.
-          </p>
+          <p className="mission-panel__result-text">{t('panels.missionFailedRetry')}</p>
         </div>
       )}
     </Card>

@@ -16,7 +16,7 @@
 .drawer {
   position: absolute;
   top: 0;
-  right: 0;
+  inset-inline-end: 0;
   bottom: 0;
   width: min(85vw, 400px);
   background-color: var(--color-bg-elevated, #fff);

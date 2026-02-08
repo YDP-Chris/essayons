@@ -11,6 +11,7 @@ import { useState, useCallback } from 'react'
 import type { ReferenceConfig, ReferenceCategory } from './types.ts'
 import { Card } from '@/components/ui/Card.tsx'
 import { Button } from '@/components/ui/Button.tsx'
+import { useTranslation } from '@/i18n'
 import './ReferencePanel.css'
 
 // ---------------------------------------------------------------------------
@@ -27,14 +28,14 @@ export interface ReferencePanelProps {
 
 interface CategoryTab {
   readonly key: ReferenceCategory
-  readonly label: string
+  readonly labelKey: string
 }
 
 const CATEGORY_TABS: readonly CategoryTab[] = [
-  { key: 'concept', label: 'Concepts' },
-  { key: 'equation', label: 'Equations' },
-  { key: 'history', label: 'History' },
-  { key: 'fun-fact', label: 'Fun Facts' },
+  { key: 'concept', labelKey: 'referenceCategories.concept' },
+  { key: 'equation', labelKey: 'referenceCategories.equation' },
+  { key: 'history', labelKey: 'referenceCategories.history' },
+  { key: 'fun-fact', labelKey: 'referenceCategories.fun-fact' },
 ] as const
 
 // ---------------------------------------------------------------------------
@@ -79,6 +80,7 @@ function ReferenceItem({ reference }: ReferenceItemProps) {
 // ---------------------------------------------------------------------------
 
 export function ReferencePanel({ references }: ReferencePanelProps) {
+  const { t } = useTranslation()
   const [activeCategory, setActiveCategory] = useState<ReferenceCategory>('concept')
 
   // Only show tabs that have at least one reference
@@ -103,11 +105,15 @@ export function ReferencePanel({ references }: ReferencePanelProps) {
 
   return (
     <Card
-      header={<h2 className="reference-panel__title">Reference</h2>}
+      header={<h2 className="reference-panel__title">{t('panels.reference')}</h2>}
       className="reference-panel"
     >
       {availableTabs.length > 1 && (
-        <div className="reference-panel__tabs" role="tablist" aria-label="Reference categories">
+        <div
+          className="reference-panel__tabs"
+          role="tablist"
+          aria-label={t('panels.referenceCategories')}
+        >
           {availableTabs.map((tab) => (
             <Button
               key={tab.key}
@@ -118,7 +124,7 @@ export function ReferencePanel({ references }: ReferencePanelProps) {
               className="reference-panel__tab"
               onClick={() => setActiveCategory(tab.key)}
             >
-              {tab.label}
+              {t(tab.labelKey)}
             </Button>
           ))}
         </div>
@@ -128,7 +134,7 @@ export function ReferencePanel({ references }: ReferencePanelProps) {
         {displayRefs.length > 0 ? (
           displayRefs.map((ref) => <ReferenceItem key={ref.id} reference={ref} />)
         ) : (
-          <p className="reference-panel__empty">No reference content available.</p>
+          <p className="reference-panel__empty">{t('panels.noReferenceContent')}</p>
         )}
       </div>
     </Card>

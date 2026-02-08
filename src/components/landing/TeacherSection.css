@@ -27,7 +27,7 @@
   flex-direction: column;
   gap: var(--space-4);
   margin-top: var(--space-8);
-  text-align: left;
+  text-align: start;
   list-style: none;
 }
 

@@ -1,68 +1,70 @@
 import './EpisodeGrid.css'
 import { Icon } from '@/components/icons'
+import { useTranslation } from '@/i18n'
+import type { TranslationFunction } from '@/i18n'
 
 interface Episode {
-  name: string
+  nameKey: string
   episodeId: string
-  domain: string
+  domainKey: string
   iconName: string
-  hook: string
+  hookKey: string
   color: string
   available: boolean
 }
 
 const episodes: Episode[] = [
   {
-    name: 'Orbit Lab',
+    nameKey: 'episodes.orbitLab.name',
     episodeId: 'orbit-lab',
-    domain: 'Physics',
+    domainKey: 'domains.physics',
     iconName: 'physics',
-    hook: 'Crash satellites into Earth until you understand gravity.',
+    hookKey: 'episodes.orbitLab.hook',
     color: 'var(--physics)',
     available: true,
   },
   {
-    name: 'Citizen Lab',
+    nameKey: 'episodes.citizenLab.name',
     episodeId: 'citizen-lab',
-    domain: 'Civics',
+    domainKey: 'domains.civics',
     iconName: 'civics',
-    hook: 'Run a democracy. See what breaks.',
+    hookKey: 'episodes.citizenLab.hook',
     color: 'var(--civics)',
     available: true,
   },
   {
-    name: 'Market Lab',
+    nameKey: 'episodes.marketLab.name',
     episodeId: 'market-lab',
-    domain: 'Economics',
+    domainKey: 'domains.economics',
     iconName: 'economics',
-    hook: 'Watch supply meet demand. Crash markets.',
+    hookKey: 'episodes.marketLab.hook',
     color: 'var(--economics)',
     available: true,
   },
   {
-    name: 'History Lab',
+    nameKey: 'episodes.historyLab.name',
     episodeId: 'history-lab',
-    domain: 'History',
+    domainKey: 'domains.history',
     iconName: 'history',
-    hook: 'What if? Change variables, see consequences.',
+    hookKey: 'episodes.historyLab.hook',
     color: 'var(--history)',
     available: false,
   },
   {
-    name: 'Gene Lab',
+    nameKey: 'episodes.geneLab.name',
     episodeId: 'gene-lab',
-    domain: 'Biology',
+    domainKey: 'domains.biology',
     iconName: 'biology',
-    hook: 'Breed generations. Watch traits emerge.',
+    hookKey: 'episodes.geneLab.hook',
     color: 'var(--biology)',
     available: true,
   },
   {
-    name: 'Bridge Lab',
+    nameKey: 'episodes.bridgeLab.name',
     episodeId: 'bridge-lab',
-    domain: 'Engineering',
+    domainKey: 'domains.engineering',
     iconName: 'engineering',
-    hook: 'Build structures. Apply loads. Watch them fail.',
+    hookKey: 'episodes.bridgeLab.hook',
     color: 'var(--engineering)',
     available: true,
   },
@@ -75,11 +77,16 @@ export interface EpisodeGridProps {
 function EpisodeCard({
   episode,
   onSelect,
+  t,
 }: {
   episode: Episode
   onSelect?: (episodeId: string) => void
+  t: TranslationFunction
 }) {
   const style = { '--episode-color': episode.color } as React.CSSProperties
+  const name = t(episode.nameKey)
+  const domain = t(episode.domainKey)
+  const hook = t(episode.hookKey)
 
   if (episode.available) {
     return (
@@ -95,9 +102,9 @@ function EpisodeCard({
         <span className="episode-card-icon" aria-hidden="true">
           <Icon name={episode.iconName} size={32} />
         </span>
-        <span className="episode-card-name">{episode.name}</span>
-        <span className="episode-card-domain">{episode.domain}</span>
-        <p className="episode-card-hook">{episode.hook}</p>
+        <span className="episode-card-name">{name}</span>
+        <span className="episode-card-domain">{domain}</span>
+        <p className="episode-card-hook">{hook}</p>
       </button>
     )
   }
@@ -107,23 +114,25 @@ function EpisodeCard({
       <span className="episode-card-icon" aria-hidden="true">
         <Icon name={episode.iconName} size={32} />
       </span>
-      <span className="episode-card-name">{episode.name}</span>
-      <span className="episode-card-domain">{episode.domain}</span>
-      <p className="episode-card-hook">{episode.hook}</p>
-      <span className="episode-card-badge">Coming Soon</span>
+      <span className="episode-card-name">{name}</span>
+      <span className="episode-card-domain">{domain}</span>
+      <p className="episode-card-hook">{hook}</p>
+      <span className="episode-card-badge">{t('episodes.comingSoon')}</span>
     </div>
   )
 }
 
 export function EpisodeGrid({ onSelectEpisode }: EpisodeGridProps) {
+  const { t } = useTranslation()
+
   return (
     <section id="episodes" className="episodes" aria-labelledby="episodes-heading">
       <h2 id="episodes-heading" className="text-h1 episodes-heading">
-        Choose your lab.
+        {t('episodes.chooseYourLab')}
       </h2>
       <div className="episodes-grid">
         {episodes.map((episode) => (
-          <EpisodeCard key={episode.name} episode={episode} onSelect={onSelectEpisode} />
+          <EpisodeCard key={episode.episodeId} episode={episode} onSelect={onSelectEpisode} t={t} />
         ))}
       </div>
     </section>

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TeacherDashboard } from './TeacherDashboard.tsx'
+import { LocaleProvider } from '@/i18n'
 
 // Mock the navigate function
 vi.mock('@/shared/router/router.ts', async () => {
@@ -54,22 +55,38 @@ describe('TeacherDashboard', () => {
   })
 
   it('renders without crashing', () => {
-    const { container } = render(<TeacherDashboard />)
+    const { container } = render(
+      <LocaleProvider>
+        <TeacherDashboard />
+      </LocaleProvider>,
+    )
     expect(container).toBeTruthy()
   })
 
   it('displays the Teacher Dashboard title', () => {
-    render(<TeacherDashboard />)
+    render(
+      <LocaleProvider>
+        <TeacherDashboard />
+      </LocaleProvider>,
+    )
     expect(screen.getByText('Teacher Dashboard')).toBeInTheDocument()
   })
 
   it('displays the Essayons wordmark in the nav', () => {
-    render(<TeacherDashboard />)
+    render(
+      <LocaleProvider>
+        <TeacherDashboard />
+      </LocaleProvider>,
+    )
     expect(screen.getByText('Essayons')).toBeInTheDocument()
   })
 
   it('displays a Back to Labs button', () => {
-    render(<TeacherDashboard />)
+    render(
+      <LocaleProvider>
+        <TeacherDashboard />
+      </LocaleProvider>,
+    )
     const backBtn = screen.getByRole('button', { name: /back to labs/i })
     expect(backBtn).toBeInTheDocument()
   })
@@ -77,29 +94,49 @@ describe('TeacherDashboard', () => {
   it('navigates to landing when Back to Labs is clicked', async () => {
     const { navigate } = await import('@/shared/router/router.ts')
     const user = userEvent.setup()
-    render(<TeacherDashboard />)
+    render(
+      <LocaleProvider>
+        <TeacherDashboard />
+      </LocaleProvider>,
+    )
 
     await user.click(screen.getByRole('button', { name: /back to labs/i }))
     expect(navigate).toHaveBeenCalledWith('/')
   })
 
   it('renders the Link Generator section', () => {
-    render(<TeacherDashboard />)
+    render(
+      <LocaleProvider>
+        <TeacherDashboard />
+      </LocaleProvider>,
+    )
     expect(screen.getByText('Classroom Link Generator')).toBeInTheDocument()
   })
 
   it('renders the Sequence Builder section', () => {
-    render(<TeacherDashboard />)
+    render(
+      <LocaleProvider>
+        <TeacherDashboard />
+      </LocaleProvider>,
+    )
     expect(screen.getByText('Episode Sequence Builder')).toBeInTheDocument()
   })
 
   it('renders the Progress Viewer section', () => {
-    render(<TeacherDashboard />)
+    render(
+      <LocaleProvider>
+        <TeacherDashboard />
+      </LocaleProvider>,
+    )
     expect(screen.getByText('Student Progress Viewer')).toBeInTheDocument()
   })
 
   it('renders the Lesson Plan Export section', () => {
-    render(<TeacherDashboard />)
+    render(
+      <LocaleProvider>
+        <TeacherDashboard />
+      </LocaleProvider>,
+    )
     expect(screen.getByText('Lesson Plan Export')).toBeInTheDocument()
   })
 })
