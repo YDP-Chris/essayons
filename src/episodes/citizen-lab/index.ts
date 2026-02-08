@@ -121,15 +121,15 @@ export const citizenLabDefinition: EpisodeDefinition = {
     // No additional render layers needed — we use the episode render function
   },
 
-  createInitialState: (): PhysicsState => {
-    const params: ParamValues = {
+  createInitialState: (_params?: ParamValues): PhysicsState => {
+    const defaults: ParamValues = {
       'party-composition': 55,
       'public-approval': 50,
       'lobbying-pressure': 30,
       'media-coverage': 50,
       'filibuster-threshold': 60,
     }
-    return createInitialState(params) as unknown as PhysicsState
+    return createInitialState(defaults) as unknown as PhysicsState
   },
 
   update: (state: PhysicsState, params: ParamValues, _dt: number): PhysicsState => {

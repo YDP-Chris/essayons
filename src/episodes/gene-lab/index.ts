@@ -147,7 +147,7 @@ export const geneLabDefinition: EpisodeDefinition = {
     // No additional render layers needed
   },
 
-  createInitialState: (): PhysicsState => {
+  createInitialState: (_params?: ParamValues): PhysicsState => {
     return createInitialState({
       'population-size': 50,
       'dominant-frequency': 0.5,

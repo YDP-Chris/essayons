@@ -125,12 +125,14 @@ export const orbitLabDefinition: EpisodeDefinition = {
     // No additional render layers needed — we use the episode render function
   },
 
-  createInitialState: (): PhysicsState => {
-    return createInitialState({
-      planet: 'Earth',
-      'launch-speed': 7500,
-      'launch-angle': 80,
-    }) as unknown as PhysicsState
+  createInitialState: (params?: ParamValues): PhysicsState => {
+    return createInitialState(
+      params ?? {
+        planet: 'Earth',
+        'launch-speed': 7500,
+        'launch-angle': 80,
+      },
+    ) as unknown as PhysicsState
   },
 
   update: (state: PhysicsState, params: ParamValues, dt: number): PhysicsState => {

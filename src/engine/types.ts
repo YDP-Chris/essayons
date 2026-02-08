@@ -248,8 +248,8 @@ export interface EpisodeDefinition {
 
   /** Register layers, set up episode-specific resources. */
   init(engine: SimulationEngineInterface): void
-  /** Return the starting physics state. */
-  createInitialState(): PhysicsState
+  /** Return the starting physics state, optionally using current param values. */
+  createInitialState(params?: ParamValues): PhysicsState
   /** Pure update: current state in, next state out (fixed timestep dt). */
   update(state: PhysicsState, params: ParamValues, dt: number): PhysicsState
   /** Draw to canvas using the provided render context. */

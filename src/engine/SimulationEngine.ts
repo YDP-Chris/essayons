@@ -178,7 +178,7 @@ export class SimulationEngine implements SimulationEngineInterface, Subscribable
     this._notify()
   }
 
-  /** Reset the simulation to its initial state. */
+  /** Reset the simulation to its initial state, preserving current params. */
   reset(): void {
     this.stop()
     this.time.reset()
@@ -188,8 +188,7 @@ export class SimulationEngine implements SimulationEngineInterface, Subscribable
     this.quality.reset()
 
     if (this._episode) {
-      this._physicsState = this._episode.createInitialState()
-      this.parameters.resetAllToDefaults()
+      this._physicsState = this._episode.createInitialState(this.parameters.getAll())
       this.missions.reset()
 
       // Restart first mission
@@ -202,6 +201,21 @@ export class SimulationEngine implements SimulationEngineInterface, Subscribable
     }
 
     this._notify()
+  }
+
+  /** Reinitialize the physics state with current param values. */
+  reinitialize(): void {
+    if (this._episode) {
+      this._physicsState = this._episode.createInitialState(this.parameters.getAll())
+      this.missions.reset()
+      if (this._episode.missions.length > 0) {
+        const firstMission = this._episode.missions[0]
+        if (firstMission) {
+          this.missions.startMission(firstMission.id)
+        }
+      }
+      this._notify()
+    }
   }
 
   /** Destroy the engine, cleaning up all resources. */

@@ -122,7 +122,7 @@ export const bridgeLabDefinition: EpisodeDefinition = {
     // No additional render layers needed — we use the episode render function
   },
 
-  createInitialState: (): PhysicsState => {
+  createInitialState: (_params?: ParamValues): PhysicsState => {
     return createInitialState({
       material: 'steel',
       'load-weight': 1000,

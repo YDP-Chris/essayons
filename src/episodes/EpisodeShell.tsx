@@ -291,6 +291,11 @@ export function EpisodeShell({ episodeId, tutorial }: EpisodeShellProps) {
 
   const handlePlay = useCallback(() => {
     if (!engine || !config) return
+    // When starting from time 0, reinitialize physics with current
+    // param values so the user's slider changes take effect.
+    if (engine.time.simulationTime === 0) {
+      engine.reinitialize()
+    }
     engine.start()
     engine.time.play()
     trackSimulationInteraction('play', config.id)
