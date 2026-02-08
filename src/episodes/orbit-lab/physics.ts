@@ -17,7 +17,7 @@ export const G = 6.674e-11
 export const EARTH_RADIUS = 6.371e6
 
 /** Maximum number of trail points before oldest are discarded */
-const MAX_TRAIL_POINTS = 2500
+const MAX_TRAIL_POINTS = 10000
 
 /** Seconds of orbital period for geostationary orbit */
 const GEO_PERIOD = 86400

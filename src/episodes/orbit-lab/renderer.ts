@@ -3,20 +3,19 @@
  *
  * Uses a fixed base scale (planet always visible) with user-controlled
  * zoom and pan. Draws altitude reference grid, speed-coded trail,
- * twinkling stars, apogee/perigee markers, and telemetry HUD.
+ * twinkling stars, orbit projection, rocket ship, and telemetry HUD.
  */
 
-import { EARTH_RADIUS } from './physics.ts'
+import { EARTH_RADIUS, G } from './physics.ts'
 import type { OrbitalState } from './physics.ts'
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const SATELLITE_MIN_RADIUS = 4
-const SATELLITE_GLOW_MULTIPLIER = 3
 const VECTOR_SCALE = 0.00004
 const TRAIL_LINE_WIDTH = 1.5
+const PROJECTION_STEPS = 360
 
 /** Altitude grid rings: [altitude in meters, label, color, lineWidth] */
 const GRID_RINGS: Array<[number, string, string, number]> = [
@@ -36,17 +35,12 @@ const GRID_RINGS: Array<[number, string, string, number]> = [
 const COLORS = {
   background: '#070b14',
   planet: '#2563eb',
-  planetGlow: 'rgba(37, 99, 235, 0.15)',
   planetAtmosphere: 'rgba(100, 180, 255, 0.08)',
-  surfaceRing: 'rgba(100, 180, 255, 0.25)',
-  satellite: '#f59e0b',
-  satelliteGlow: 'rgba(245, 158, 11, 0.6)',
   velocityVector: '#22c55e',
   gravityVector: '#ef4444',
   crashFlash: 'rgba(239, 68, 68, 0.3)',
   text: '#e2e8f0',
-  textDim: '#94a3b8',
-  accent: '#00e5ff',
+  projection: 'rgba(255,255,255,0.12)',
 } as const
 
 // ---------------------------------------------------------------------------
@@ -107,7 +101,6 @@ function attachInteractions(canvas: HTMLCanvasElement): void {
   canvas.addEventListener('mousedown', onMouseDown)
   window.addEventListener('mousemove', onMouseMove)
   window.addEventListener('mouseup', onMouseUp)
-  // Touch pan
   canvas.addEventListener('touchstart', onTouchStart, { passive: false })
   canvas.addEventListener('touchmove', onTouchMove, { passive: false })
   canvas.addEventListener('touchend', onTouchEnd)
@@ -212,20 +205,18 @@ function computeViewTransform(
   height: number,
   follow: boolean,
 ): ViewTransform {
-  // Follow mode: camera tracks satellite
   if (follow && !state.crashed) {
     _camX = -state.satellite.x
     _camY = -state.satellite.y
   }
 
-  // Fixed base scale: planet radius * 3 on each side of center
   const bsc = Math.min(width, height) / (state.planet.radius * 6)
   const scale = bsc * _zoom
 
   return {
     scale,
     offsetX: width / 2 + _camX * scale,
-    offsetY: height / 2 - _camY * scale, // flip Y
+    offsetY: height / 2 - _camY * scale,
     planetScreenRadius: state.planet.radius * scale,
   }
 }
@@ -249,7 +240,6 @@ function drawBackground(ctx: CanvasRenderingContext2D, width: number, height: nu
   ctx.fillStyle = COLORS.background
   ctx.fillRect(0, 0, width, height)
 
-  // Twinkling stars
   ensureStars()
   const t = performance.now() / 1000
   for (const star of _stars) {
@@ -290,6 +280,99 @@ function drawAltitudeGrid(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Orbit Projection — predicted path from current state vectors
+// ---------------------------------------------------------------------------
+
+function drawOrbitProjection(
+  ctx: CanvasRenderingContext2D,
+  state: OrbitalState,
+  transform: ViewTransform,
+): void {
+  if (state.crashed || state.escaped) return
+
+  const { satellite, planet } = state
+  const mu = G * planet.mass
+  const x = satellite.x - planet.x
+  const y = satellite.y - planet.y
+  const vx = satellite.vx
+  const vy = satellite.vy
+
+  const r = Math.sqrt(x * x + y * y)
+  const v = Math.sqrt(vx * vx + vy * vy)
+  if (r < 1 || v < 1) return
+
+  // Angular momentum (scalar, 2D)
+  const h = x * vy - y * vx
+
+  // Semi-latus rectum
+  const p = (h * h) / mu
+  if (p < 1) return
+
+  // Eccentricity vector
+  const ex = (vy * h) / mu - x / r
+  const ey = -(vx * h) / mu - y / r
+  const e = Math.sqrt(ex * ex + ey * ey)
+
+  // Argument of periapsis (angle of eccentricity vector)
+  const omega = Math.atan2(ey, ex)
+
+  // Determine theta range
+  let thetaMin: number
+  let thetaMax: number
+
+  if (e < 1) {
+    // Ellipse: full orbit
+    thetaMin = 0
+    thetaMax = 2 * Math.PI
+  } else {
+    // Hyperbola: limited range where r > 0
+    const thetaLimit = Math.acos(-1 / e) - 0.01
+    thetaMin = -thetaLimit
+    thetaMax = thetaLimit
+  }
+
+  // Draw the projected conic
+  ctx.beginPath()
+  ctx.setLineDash([6, 6])
+  ctx.strokeStyle = COLORS.projection
+  ctx.lineWidth = 1
+
+  let started = false
+  for (let i = 0; i <= PROJECTION_STEPS; i++) {
+    const theta = thetaMin + ((thetaMax - thetaMin) * i) / PROJECTION_STEPS
+    const denom = 1 + e * Math.cos(theta)
+    if (denom <= 0.01) continue
+
+    const rTheta = p / denom
+
+    // Skip if orbit goes inside planet (would crash)
+    if (rTheta < planet.radius) continue
+
+    // Clip extremely far points (don't draw beyond 15x planet radius)
+    if (rTheta > planet.radius * 30) continue
+
+    const wx = rTheta * Math.cos(theta + omega) + planet.x
+    const wy = rTheta * Math.sin(theta + omega) + planet.y
+
+    const pt = worldToScreen(wx, wy, transform)
+
+    if (!started) {
+      ctx.moveTo(pt.sx, pt.sy)
+      started = true
+    } else {
+      ctx.lineTo(pt.sx, pt.sy)
+    }
+  }
+
+  ctx.stroke()
+  ctx.setLineDash([])
+}
+
+// ---------------------------------------------------------------------------
+// Planet
+// ---------------------------------------------------------------------------
+
 function drawPlanet(
   ctx: CanvasRenderingContext2D,
   state: OrbitalState,
@@ -299,7 +382,7 @@ function drawPlanet(
   const center = worldToScreen(planet.x, planet.y, transform)
   const displayRadius = transform.planetScreenRadius
 
-  // Atmosphere glow (outer)
+  // Atmosphere glow
   const atmoRadius = (planet.radius + 300_000) * transform.scale
   const atmosphereGradient = ctx.createRadialGradient(
     center.sx,
@@ -317,7 +400,7 @@ function drawPlanet(
   ctx.arc(center.sx, center.sy, atmoRadius, 0, 2 * Math.PI)
   ctx.fill()
 
-  // Planet body with gradient
+  // Planet body
   const bodyGradient = ctx.createRadialGradient(
     center.sx - displayRadius * 0.3,
     center.sy - displayRadius * 0.3,
@@ -334,7 +417,7 @@ function drawPlanet(
   ctx.arc(center.sx, center.sy, displayRadius, 0, 2 * Math.PI)
   ctx.fill()
 
-  // Thin atmosphere ring at planet's edge
+  // Atmosphere edge
   const atmoEdge = (planet.radius + 100_000) * transform.scale
   const edgeGradient = ctx.createRadialGradient(
     center.sx,
@@ -352,10 +435,10 @@ function drawPlanet(
   ctx.fill()
 }
 
-/**
- * Interpolate between blue (slow) and red (fast) based on a 0-1 factor.
- * 0 = blue (#3b82f6), 1 = red (#ef4444).
- */
+// ---------------------------------------------------------------------------
+// Speed-coded Trail
+// ---------------------------------------------------------------------------
+
 function speedColor(t: number): { r: number; g: number; b: number } {
   return {
     r: Math.round(59 + (239 - 59) * t),
@@ -401,6 +484,10 @@ function drawTrail(
     ctx.stroke()
   }
 }
+
+// ---------------------------------------------------------------------------
+// Apogee / Perigee Markers
+// ---------------------------------------------------------------------------
 
 function drawApseMarkers(
   ctx: CanvasRenderingContext2D,
@@ -455,7 +542,11 @@ function drawApseMarkers(
   drawMarker(perigeeIdx, 'PE')
 }
 
-function drawSatellite(
+// ---------------------------------------------------------------------------
+// Rocket Ship
+// ---------------------------------------------------------------------------
+
+function drawRocket(
   ctx: CanvasRenderingContext2D,
   state: OrbitalState,
   transform: ViewTransform,
@@ -464,34 +555,112 @@ function drawSatellite(
 
   const { satellite } = state
   const pos = worldToScreen(satellite.x, satellite.y, transform)
-  const radius = Math.max(SATELLITE_MIN_RADIUS, 3)
-  const glowRadius = radius * SATELLITE_GLOW_MULTIPLIER
-
-  // Glow halo
-  ctx.beginPath()
-  ctx.arc(pos.sx, pos.sy, 9, 0, 2 * Math.PI)
-  ctx.fillStyle = 'rgba(0,229,255,0.25)'
-  ctx.fill()
-
-  // Body (bright white dot like POC)
-  ctx.fillStyle = '#fff'
-  ctx.beginPath()
-  ctx.arc(pos.sx, pos.sy, radius, 0, 2 * Math.PI)
-  ctx.fill()
-
-  // Direction indicator
   const speed = Math.sqrt(satellite.vx * satellite.vx + satellite.vy * satellite.vy)
-  if (speed > 0) {
-    const dirX = satellite.vx / speed
-    const dirY = satellite.vy / speed
-    ctx.strokeStyle = COLORS.satellite
-    ctx.lineWidth = 2
+
+  // Heading angle in screen space (note: screen Y is flipped)
+  const heading = speed > 0 ? Math.atan2(-satellite.vy, satellite.vx) : 0
+
+  const SIZE = 10 // half-length of rocket body
+
+  ctx.save()
+  ctx.translate(pos.sx, pos.sy)
+  ctx.rotate(heading)
+
+  // --- Engine flame (animated, drawn behind rocket) ---
+  if (speed > 100) {
+    const t = performance.now() / 80
+    const flicker = 0.7 + 0.3 * Math.sin(t * 3.7)
+    const flameLen = SIZE * (0.8 + flicker * 0.6)
+
+    // Outer flame (orange/red)
+    const flameGrad = ctx.createLinearGradient(-SIZE, 0, -SIZE - flameLen, 0)
+    flameGrad.addColorStop(0, 'rgba(255,200,50,0.9)')
+    flameGrad.addColorStop(0.4, 'rgba(255,120,20,0.6)')
+    flameGrad.addColorStop(1, 'rgba(255,40,0,0)')
+    ctx.fillStyle = flameGrad
+
     ctx.beginPath()
-    ctx.moveTo(pos.sx, pos.sy)
-    ctx.lineTo(pos.sx + dirX * glowRadius, pos.sy - dirY * glowRadius)
-    ctx.stroke()
+    ctx.moveTo(-SIZE, -3)
+    ctx.lineTo(-SIZE - flameLen, 0)
+    ctx.lineTo(-SIZE, 3)
+    ctx.closePath()
+    ctx.fill()
+
+    // Inner flame (white-hot core)
+    const coreLen = flameLen * 0.5
+    const coreGrad = ctx.createLinearGradient(-SIZE, 0, -SIZE - coreLen, 0)
+    coreGrad.addColorStop(0, 'rgba(255,255,255,0.8)')
+    coreGrad.addColorStop(1, 'rgba(255,200,100,0)')
+    ctx.fillStyle = coreGrad
+
+    ctx.beginPath()
+    ctx.moveTo(-SIZE, -1.5)
+    ctx.lineTo(-SIZE - coreLen, 0)
+    ctx.lineTo(-SIZE, 1.5)
+    ctx.closePath()
+    ctx.fill()
   }
+
+  // --- Rocket body ---
+  // Main body (white/light gray capsule)
+  ctx.fillStyle = '#e8ecf0'
+  ctx.beginPath()
+  ctx.moveTo(SIZE + 6, 0) // nose tip
+  ctx.lineTo(SIZE, -4) // nose shoulder top
+  ctx.lineTo(-SIZE, -4) // body top
+  ctx.lineTo(-SIZE, 4) // body bottom
+  ctx.lineTo(SIZE, 4) // nose shoulder bottom
+  ctx.closePath()
+  ctx.fill()
+
+  // Nose cone accent (darker tip)
+  ctx.fillStyle = '#c0c8d0'
+  ctx.beginPath()
+  ctx.moveTo(SIZE + 6, 0)
+  ctx.lineTo(SIZE, -4)
+  ctx.lineTo(SIZE, 4)
+  ctx.closePath()
+  ctx.fill()
+
+  // Window (small blue circle)
+  ctx.fillStyle = '#4fc3f7'
+  ctx.beginPath()
+  ctx.arc(SIZE * 0.3, 0, 2, 0, 2 * Math.PI)
+  ctx.fill()
+
+  // --- Fins ---
+  ctx.fillStyle = '#ef5350'
+  // Top fin
+  ctx.beginPath()
+  ctx.moveTo(-SIZE, -4)
+  ctx.lineTo(-SIZE - 4, -9)
+  ctx.lineTo(-SIZE + 3, -4)
+  ctx.closePath()
+  ctx.fill()
+  // Bottom fin
+  ctx.beginPath()
+  ctx.moveTo(-SIZE, 4)
+  ctx.lineTo(-SIZE - 4, 9)
+  ctx.lineTo(-SIZE + 3, 4)
+  ctx.closePath()
+  ctx.fill()
+
+  // --- Body stripe ---
+  ctx.fillStyle = '#ef5350'
+  ctx.fillRect(-SIZE * 0.2, -4, 3, 8)
+
+  ctx.restore()
+
+  // Glow around rocket
+  ctx.beginPath()
+  ctx.arc(pos.sx, pos.sy, 14, 0, 2 * Math.PI)
+  ctx.fillStyle = 'rgba(0,229,255,0.1)'
+  ctx.fill()
 }
+
+// ---------------------------------------------------------------------------
+// Vectors
+// ---------------------------------------------------------------------------
 
 function drawVector(
   ctx: CanvasRenderingContext2D,
@@ -567,13 +736,17 @@ function drawVectors(
   const dist = Math.sqrt(dx * dx + dy * dy)
 
   if (dist > 0) {
-    const forceMag = (6.674e-11 * planet.mass) / (dist * dist)
+    const forceMag = (G * planet.mass) / (dist * dist)
     const fx = forceMag * (dx / dist)
     const fy = forceMag * (dy / dist)
 
     drawVector(ctx, satellite.x, satellite.y, fx * 1e6, fy * 1e6, COLORS.gravityVector, transform)
   }
 }
+
+// ---------------------------------------------------------------------------
+// Effects & HUD
+// ---------------------------------------------------------------------------
 
 function drawCrashEffect(ctx: CanvasRenderingContext2D, width: number, height: number): void {
   ctx.fillStyle = COLORS.crashFlash
@@ -672,7 +845,6 @@ export function renderOrbitLab(
   width: number,
   height: number,
 ): void {
-  // Lazily attach interaction listeners
   attachInteractions(ctx.canvas)
 
   const showTrail = (params['show-trail'] as boolean | undefined) ?? true
@@ -686,40 +858,43 @@ export function renderOrbitLab(
   // 1. Background + stars
   drawBackground(ctx, width, height)
 
-  // 2. Altitude grid (behind everything)
+  // 2. Altitude grid
   if (showGrid) {
     drawAltitudeGrid(ctx, state, transform)
   }
 
-  // 3. Trail
+  // 3. Orbit projection (predicted path — behind trail)
+  drawOrbitProjection(ctx, state, transform)
+
+  // 4. Trail
   if (showTrail) {
     drawTrail(ctx, state, transform)
   }
 
-  // 4. Apogee/perigee markers
+  // 5. Apogee/perigee markers
   if (showTrail) {
     drawApseMarkers(ctx, state, transform)
   }
 
-  // 5. Planet
+  // 6. Planet
   drawPlanet(ctx, state, transform)
 
-  // 6. Satellite
-  drawSatellite(ctx, state, transform)
+  // 7. Rocket
+  drawRocket(ctx, state, transform)
 
-  // 7. Vectors
+  // 8. Vectors
   if (showVectors) {
     drawVectors(ctx, state, transform)
   }
 
-  // 8. Crash effect
+  // 9. Crash effect
   if (state.crashed) {
     drawCrashEffect(ctx, width, height)
   }
 
-  // 9. HUD
+  // 10. HUD
   drawHud(ctx, state, width, showMetrics)
 
-  // 10. Zoom info
+  // 11. Zoom info
   drawZoomControls(ctx, height)
 }
