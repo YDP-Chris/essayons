@@ -138,10 +138,10 @@ describe('Gene Lab - Genetics', () => {
         { id: 1, genotype: ['a', 'a'], phenotype: 'recessive' },
       ]
       const weighted = applySelection(population, 1.0)
-      // Dominant gets 1 + 1.0 = 2 copies, recessive gets 1 copy
-      expect(weighted.length).toBe(3)
+      // Dominant gets 1 + round(1.0 * 4) = 5 copies, recessive gets 1 copy
+      expect(weighted.length).toBe(6)
       const dominantCount = weighted.filter((o) => o.phenotype === 'dominant').length
-      expect(dominantCount).toBe(2)
+      expect(dominantCount).toBe(5)
     })
   })
 

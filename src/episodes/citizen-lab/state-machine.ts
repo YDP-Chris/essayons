@@ -66,6 +66,7 @@ export const legislativeStateMachineConfig: StateMachineConfig<LegislativeState,
       // From VOTE
       { from: 'VOTE', to: 'PASSED', on: 'SIGN_BILL' },
       { from: 'VOTE', to: 'VETOED', on: 'VETO_BILL' },
+      { from: 'VOTE', to: 'REJECTED', on: 'VOTE_FAIL' },
 
       // From VETOED
       { from: 'VETOED', to: 'OVERRIDE_ATTEMPT', on: 'ATTEMPT_OVERRIDE' },

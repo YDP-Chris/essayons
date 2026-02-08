@@ -70,7 +70,7 @@ function renderSupplyDemandChart(
   for (let q = 0; q <= maxQuantity; q += 10) {
     ctx.beginPath()
     ctx.moveTo(toX(q), padding)
-    ctx.moveTo(toX(q), padding + chartHeight)
+    ctx.lineTo(toX(q), padding + chartHeight)
     ctx.stroke()
   }
   for (let p = 0; p <= maxPrice; p += 20) {

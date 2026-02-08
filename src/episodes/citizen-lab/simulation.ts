@@ -183,7 +183,7 @@ export function suggestNextEvent(state: CivicsSimulationState): LegislativeEvent
           ? 'SIGN_BILL'
           : 'VETO_BILL'
       }
-      return null
+      return 'VOTE_FAIL'
 
     case 'VETOED':
       return 'ATTEMPT_OVERRIDE'

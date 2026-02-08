@@ -66,7 +66,7 @@ export function applySelection(population: Organism[], pressure: number): Organi
 
   const weighted: Organism[] = []
   for (const organism of population) {
-    const copies = organism.phenotype === 'dominant' ? Math.round(1 + pressure) : 1
+    const copies = organism.phenotype === 'dominant' ? 1 + Math.round(pressure * 4) : 1
     for (let i = 0; i < copies; i++) {
       weighted.push(organism)
     }
