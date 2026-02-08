@@ -25,7 +25,7 @@ export const orbitLabConfig: EpisodeConfig = {
       default: 7500,
       min: 500,
       max: 50000,
-      step: 100,
+      step: 10,
       unit: 'm/s',
       description: 'Initial velocity of the satellite',
     },
