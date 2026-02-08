@@ -1,0 +1,15 @@
+{
+  "name": "Essayons — Learn by crashing into things",
+  "short_name": "Essayons",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#1A1A2E",
+  "background_color": "#F7F6F3",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

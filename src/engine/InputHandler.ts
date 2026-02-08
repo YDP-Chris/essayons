@@ -18,6 +18,10 @@ export class InputHandler {
   private _element: HTMLElement | null = null
   private _renderer: CanvasRenderer | null = null
 
+  // Pinch-to-zoom state
+  private _pinchStartDistance: number | null = null
+  private _pinchZoomDelta: number = 0
+
   // Bound event handlers for clean detach
   private _onKeyDown: ((e: KeyboardEvent) => void) | null = null
   private _onKeyUp: ((e: KeyboardEvent) => void) | null = null
@@ -27,6 +31,13 @@ export class InputHandler {
   private _onTouchStart: ((e: TouchEvent) => void) | null = null
   private _onTouchEnd: ((e: TouchEvent) => void) | null = null
   private _onTouchMove: ((e: TouchEvent) => void) | null = null
+
+  /** Compute distance between two touch points. */
+  private _touchDistance(t1: Touch, t2: Touch): number {
+    const dx = t1.clientX - t2.clientX
+    const dy = t1.clientY - t2.clientY
+    return Math.sqrt(dx * dx + dy * dy)
+  }
 
   /** Register input bindings (replaces any previous bindings). */
   registerBindings(bindings: ReadonlyArray<InputBinding>): void {
@@ -85,8 +96,11 @@ export class InputHandler {
     }
 
     this._onTouchStart = (e: TouchEvent) => {
-      const touch = e.touches[0]
-      if (touch) {
+      if (e.touches.length === 2) {
+        // Start pinch tracking
+        this._pinchStartDistance = this._touchDistance(e.touches[0]!, e.touches[1]!)
+      } else if (e.touches.length === 1) {
+        const touch = e.touches[0]!
         const rect = this._element?.getBoundingClientRect()
         if (rect) {
           this._pointerScreen = {
@@ -102,13 +116,21 @@ export class InputHandler {
       }
     }
 
-    this._onTouchEnd = () => {
-      // pointer remains at last known position
+    this._onTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length < 2) {
+        this._pinchStartDistance = null
+      }
     }
 
     this._onTouchMove = (e: TouchEvent) => {
-      const touch = e.touches[0]
-      if (touch) {
+      if (e.touches.length === 2 && this._pinchStartDistance !== null) {
+        // Pinch gesture active
+        const currentDistance = this._touchDistance(e.touches[0]!, e.touches[1]!)
+        this._pinchZoomDelta +=
+          (currentDistance - this._pinchStartDistance) / this._pinchStartDistance
+        this._pinchStartDistance = currentDistance
+      } else if (e.touches.length === 1) {
+        const touch = e.touches[0]!
         const rect = this._element?.getBoundingClientRect()
         if (rect) {
           this._pointerScreen = {
@@ -172,6 +194,8 @@ export class InputHandler {
     this._heldMouse.clear()
     this._pressedThisFrame.clear()
     this._pointerScreen = null
+    this._pinchStartDistance = null
+    this._pinchZoomDelta = 0
   }
 
   /**
@@ -208,10 +232,12 @@ export class InputHandler {
       actionsPressed: [...this._pressedThisFrame],
       pointerScreen: this._pointerScreen,
       pointerWorld,
+      pinchZoom: this._pinchZoomDelta,
     }
 
     // Clear per-frame data
     this._pressedThisFrame.clear()
+    this._pinchZoomDelta = 0
 
     return state
   }

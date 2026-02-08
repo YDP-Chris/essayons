@@ -147,6 +147,8 @@ export interface InputState {
   readonly pointerScreen: Vector2 | null
   /** Current pointer position in world coordinates, or null. */
   readonly pointerWorld: Vector2 | null
+  /** Pinch-to-zoom delta since last poll (positive = zoom in, negative = zoom out). 0 if no pinch. */
+  readonly pinchZoom: number
 }
 
 // ---------------------------------------------------------------------------

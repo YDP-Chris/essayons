@@ -1,9 +1,10 @@
 /* DomainOrbit Component Styles */
 
 .domain-orbit {
+  --orbit-size: clamp(240px, 60vw, 400px);
   position: relative;
-  width: 400px;
-  height: 400px;
+  width: var(--orbit-size);
+  height: var(--orbit-size);
   margin: 0 auto;
 }
 
@@ -12,8 +13,8 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 120px;
-  height: 120px;
+  width: calc(var(--orbit-size) * 0.3);
+  height: calc(var(--orbit-size) * 0.3);
   border-radius: 50%;
   background: #1a1a2e;
   box-shadow: 0 0 40px rgba(0, 212, 170, 0.3);
@@ -39,23 +40,23 @@
 }
 
 .domain-orbit__ring--1 {
-  width: 200px;
-  height: 200px;
-  margin: -100px 0 0 -100px;
+  width: calc(var(--orbit-size) * 0.5);
+  height: calc(var(--orbit-size) * 0.5);
+  margin: calc(var(--orbit-size) * -0.25) 0 0 calc(var(--orbit-size) * -0.25);
   animation: orbit-spin 30s linear infinite;
 }
 
 .domain-orbit__ring--2 {
-  width: 300px;
-  height: 300px;
-  margin: -150px 0 0 -150px;
+  width: calc(var(--orbit-size) * 0.75);
+  height: calc(var(--orbit-size) * 0.75);
+  margin: calc(var(--orbit-size) * -0.375) 0 0 calc(var(--orbit-size) * -0.375);
   animation: orbit-spin 45s linear infinite reverse;
 }
 
 .domain-orbit__ring--3 {
-  width: 400px;
-  height: 400px;
-  margin: -200px 0 0 -200px;
+  width: var(--orbit-size);
+  height: var(--orbit-size);
+  margin: calc(var(--orbit-size) * -0.5) 0 0 calc(var(--orbit-size) * -0.5);
   animation: orbit-spin 60s linear infinite;
 }
 
@@ -102,14 +103,7 @@
   }
 }
 
-/* Responsive: scale down on mobile */
-@media (max-width: 767px) {
-  .domain-orbit {
-    width: 300px;
-    height: 300px;
-    transform: scale(0.75);
-  }
-}
+/* Responsive sizing handled by clamp() on --orbit-size */
 
 /* Respect reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
