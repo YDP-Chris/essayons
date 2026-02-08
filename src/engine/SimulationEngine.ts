@@ -274,8 +274,14 @@ export class SimulationEngine implements SimulationEngineInterface, Subscribable
     // Accumulate for fixed-timestep physics
     this._accumulator += scaledDelta
 
-    // Consume accumulated time in fixed steps
-    const dt = this.config.fixedTimestep
+    // Consume accumulated time in fixed steps.
+    // At high speed multipliers, scale up the physics timestep to avoid
+    // needing thousands of tiny steps per frame. Velocity Verlet stays
+    // stable with larger dt.
+    const baseDt = this.config.fixedTimestep
+    const speed = this.time.speedMultiplier
+    const dtScale = speed <= 100 ? 1 : Math.min(speed / 100, 50)
+    const dt = baseDt * dtScale
     let ticks = 0
     const maxTicks = this.config.maxTicksPerFrame
 

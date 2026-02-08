@@ -212,7 +212,7 @@ export interface EngineConfig {
 /** Default engine configuration values. */
 export const DEFAULT_ENGINE_CONFIG: EngineConfig = {
   fixedTimestep: 1 / 60,
-  maxTicksPerFrame: 10,
+  maxTicksPerFrame: 500,
   targetFps: 30,
 } as const
 
