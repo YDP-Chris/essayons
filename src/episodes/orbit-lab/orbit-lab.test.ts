@@ -406,6 +406,142 @@ describe('Orbit Lab Physics', () => {
       // Trail should not grow beyond the initial point
       expect(finalState.trail.length).toBe(1)
     })
+
+    it('should store speed on trail points', () => {
+      const state = createInitialState(defaultParams)
+      const params = { ...defaultParams, 'show-trail': true }
+
+      const finalState = simulate(state, params, 1 / 60, 10)
+
+      for (const pt of finalState.trail) {
+        expect(pt.speed).toBeDefined()
+        expect(pt.speed).toBeGreaterThan(0)
+      }
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  // Orbital Metrics
+  // -------------------------------------------------------------------------
+
+  describe('orbital metrics', () => {
+    it('should compute near-zero eccentricity for circular orbit', () => {
+      // Use the actual launch radius (EARTH_RADIUS + 1km) for correct circular velocity
+      const r = EARTH_RADIUS + 1000
+      const M = 5.972e24
+      const vCircular = Math.sqrt((G * M) / r)
+
+      const params = {
+        ...defaultParams,
+        'launch-speed': vCircular,
+        'launch-angle': 90,
+        'show-trail': false,
+      }
+      const state = createInitialState(params)
+      const finalState = simulate(state, params, 1 / 60, 1000)
+
+      expect(finalState.eccentricity).toBeLessThan(0.01)
+    })
+
+    it('should compute negative specific energy for bound orbit', () => {
+      const altitude = 400000
+      const r = EARTH_RADIUS + altitude
+      const M = 5.972e24
+      const vCircular = Math.sqrt((G * M) / r)
+
+      const params = {
+        ...defaultParams,
+        'launch-speed': vCircular,
+        'show-trail': false,
+      }
+      const state = createInitialState(params)
+      const finalState = simulate(state, params, 1 / 60, 100)
+
+      expect(finalState.specificEnergy).toBeLessThan(0)
+    })
+
+    it('should compute positive specific energy for escape trajectory', () => {
+      const altitude = 400000
+      const r = EARTH_RADIUS + altitude
+      const M = 5.972e24
+      const vEscape = Math.sqrt((2 * G * M) / r)
+
+      const params = {
+        ...defaultParams,
+        'launch-speed': vEscape * 1.1,
+        'show-trail': false,
+      }
+      const state = createInitialState(params)
+      const finalState = simulate(state, params, 1, 100)
+
+      expect(finalState.specificEnergy).toBeGreaterThan(0)
+    })
+
+    it('should compute correct apogee and perigee for circular orbit', () => {
+      // Launch from actual position with matching circular velocity
+      const launchAlt = 1000 // 1km above surface (actual launch position)
+      const r = EARTH_RADIUS + launchAlt
+      const M = 5.972e24
+      const vCircular = Math.sqrt((G * M) / r)
+
+      const params = {
+        ...defaultParams,
+        'launch-speed': vCircular,
+        'launch-angle': 90,
+        'show-trail': false,
+      }
+      const state = createInitialState(params)
+      const finalState = simulate(state, params, 1 / 60, 1000)
+
+      // For near-circular orbit, apogee and perigee should both be near launch altitude
+      expect(finalState.apogee / 1000).toBeCloseTo(launchAlt / 1000, 0)
+      expect(finalState.perigee / 1000).toBeCloseTo(launchAlt / 1000, 0)
+    })
+
+    it('should compute acceleration matching GM/r²', () => {
+      const state = createInitialState(defaultParams)
+      const r = Math.sqrt(state.satellite.x ** 2 + state.satellite.y ** 2)
+      const expected = (G * state.planet.mass) / (r * r)
+
+      expect(state.acceleration).toBeCloseTo(expected, 2)
+    })
+
+    it('should have semi-major axis > 0 for bound orbits', () => {
+      // Use actual launch radius for correct circular velocity
+      const r = EARTH_RADIUS + 1000
+      const M = 5.972e24
+      const vCircular = Math.sqrt((G * M) / r)
+
+      const params = {
+        ...defaultParams,
+        'launch-speed': vCircular,
+        'launch-angle': 90,
+        'show-trail': false,
+      }
+      const state = createInitialState(params)
+      const finalState = simulate(state, params, 1 / 60, 100)
+
+      expect(finalState.semiMajorAxis).toBeGreaterThan(0)
+      // Semi-major axis should be close to r for near-circular orbit
+      expect(finalState.semiMajorAxis / r).toBeCloseTo(1, 1)
+    })
+
+    it('should have eccentricity >= 1 for escape trajectory', () => {
+      const altitude = 400000
+      const r = EARTH_RADIUS + altitude
+      const M = 5.972e24
+      const vEscape = Math.sqrt((2 * G * M) / r)
+
+      const params = {
+        ...defaultParams,
+        'launch-speed': vEscape * 1.5,
+        'show-trail': false,
+      }
+      const state = createInitialState(params)
+      const finalState = simulate(state, params, 1, 100)
+
+      expect(finalState.eccentricity).toBeGreaterThanOrEqual(1)
+    })
   })
 })
 
@@ -566,8 +702,8 @@ describe('Orbit Lab Config', () => {
     expect(orbitLabConfig.simulationMode).toBe('continuous')
   })
 
-  it('should have 5 parameters', () => {
-    expect(orbitLabConfig.parameters).toHaveLength(5)
+  it('should have 6 parameters', () => {
+    expect(orbitLabConfig.parameters).toHaveLength(6)
   })
 
   it('should have 3 equations', () => {

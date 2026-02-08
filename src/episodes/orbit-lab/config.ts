@@ -57,6 +57,13 @@ export const orbitLabConfig: EpisodeConfig = {
       default: false,
       description: 'Display velocity and gravity force vectors',
     },
+    {
+      id: 'show-metrics',
+      label: 'Show Metrics',
+      type: 'boolean',
+      default: true,
+      description: 'Display expanded orbital metrics (eccentricity, apogee, perigee, energy)',
+    },
   ],
   equations: [
     {

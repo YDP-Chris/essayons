@@ -46,6 +46,7 @@ export interface Planet {
 export interface TrailPoint {
   readonly x: number
   readonly y: number
+  readonly speed: number
 }
 
 export interface OrbitalState {
@@ -58,6 +59,12 @@ export interface OrbitalState {
   readonly orbitsCompleted: number
   readonly simTime: number
   readonly orbitalPeriod: number
+  readonly eccentricity: number
+  readonly semiMajorAxis: number
+  readonly apogee: number
+  readonly perigee: number
+  readonly specificEnergy: number
+  readonly acceleration: number
 }
 
 export interface OrbitalParams {
@@ -128,16 +135,46 @@ export function createInitialState(params: Record<string, unknown>): OrbitalStat
   const vx = launchSpeed * Math.cos(angleRad)
   const vy = launchSpeed * Math.sin(angleRad)
 
+  const speed = launchSpeed
+  const dist = Math.sqrt(satX * satX + satY * satY)
+  const accelMag = (G * planetMass) / (dist * dist)
+  const energy = 0.5 * speed * speed - (G * planetMass) / dist
+  let ecc = 0
+  let sma = 0
+  let apo = 0
+  let per = 0
+  let period = 0
+
+  if (energy < 0) {
+    sma = -(G * planetMass) / (2 * energy)
+    // Eccentricity from state vectors: e = |((v²-GM/r)*r_vec - (r_vec·v_vec)*v_vec)| / GM
+    const mu = G * planetMass
+    const v2 = speed * speed
+    const rdotv = satX * vx + satY * vy
+    const evx = ((v2 - mu / dist) * satX - rdotv * vx) / mu
+    const evy = ((v2 - mu / dist) * satY - rdotv * vy) / mu
+    ecc = Math.sqrt(evx * evx + evy * evy)
+    apo = sma * (1 + ecc) - planetRadius
+    per = sma * (1 - ecc) - planetRadius
+    period = 2 * Math.PI * Math.sqrt((sma * sma * sma) / mu)
+  }
+
   return {
     satellite: { x: satX, y: satY, vx, vy },
     planet: { x: 0, y: 0, radius: planetRadius, mass: planetMass },
-    trail: [{ x: satX, y: satY }],
+    trail: [{ x: satX, y: satY, speed }],
     totalAngle: 0,
     crashed: false,
     escaped: false,
     orbitsCompleted: 0,
     simTime: 0,
-    orbitalPeriod: 0,
+    orbitalPeriod: period,
+    eccentricity: ecc,
+    semiMajorAxis: sma,
+    apogee: apo,
+    perigee: per,
+    specificEnergy: energy,
+    acceleration: accelMag,
   }
 }
 
@@ -211,17 +248,35 @@ export function updateOrbitalState(
   const totalAngle = state.totalAngle + angleDelta
   const orbitsCompleted = Math.floor(Math.abs(totalAngle) / (2 * Math.PI))
 
-  // --- Orbital period estimation ---
-  // Compute from the semi-major axis using Kepler's third law: T = 2pi * sqrt(a^3 / (G*M))
-  // For a more robust estimate, we compute specific orbital energy and semi-major axis.
-  const specificEnergy = 0.5 * speed * speed - (G * planet.mass) / dist
+  // --- Orbital metrics ---
+  const mu = G * planet.mass
+  const specificEnergy = 0.5 * speed * speed - mu / dist
+  const accelMag = mu / (dist * dist)
   let orbitalPeriod = state.orbitalPeriod
+  let semiMajorAxis = 0
+  let eccentricity = 0
+  let apogee = 0
+  let perigee = 0
 
-  // Only compute period for bound orbits (negative specific energy)
   if (specificEnergy < 0) {
-    const semiMajorAxis = -(G * planet.mass) / (2 * specificEnergy)
-    orbitalPeriod =
-      2 * Math.PI * Math.sqrt((semiMajorAxis * semiMajorAxis * semiMajorAxis) / (G * planet.mass))
+    semiMajorAxis = -mu / (2 * specificEnergy)
+    orbitalPeriod = 2 * Math.PI * Math.sqrt((semiMajorAxis * semiMajorAxis * semiMajorAxis) / mu)
+
+    // Eccentricity from state vectors: e_vec = ((v²-μ/r)*r_vec - (r·v)*v_vec) / μ
+    const v2 = speed * speed
+    const rdotv = newX * newVx + newY * newVy
+    const evx = ((v2 - mu / dist) * newX - rdotv * newVx) / mu
+    const evy = ((v2 - mu / dist) * newY - rdotv * newVy) / mu
+    eccentricity = Math.sqrt(evx * evx + evy * evy)
+    apogee = semiMajorAxis * (1 + eccentricity) - planet.radius
+    perigee = semiMajorAxis * (1 - eccentricity) - planet.radius
+  } else {
+    // Unbound orbit — compute eccentricity for display but apogee/perigee are undefined
+    const v2 = speed * speed
+    const rdotv = newX * newVx + newY * newVy
+    const evx = ((v2 - mu / dist) * newX - rdotv * newVx) / mu
+    const evy = ((v2 - mu / dist) * newY - rdotv * newVy) / mu
+    eccentricity = Math.sqrt(evx * evx + evy * evy)
   }
 
   // --- Trail ---
@@ -229,7 +284,7 @@ export function updateOrbitalState(
   let trail = state.trail
 
   if (showTrail && !crashed && !escaped) {
-    const newTrail = [...state.trail, { x: newX, y: newY }]
+    const newTrail = [...state.trail, { x: newX, y: newY, speed }]
     // Cap trail length
     trail =
       newTrail.length > MAX_TRAIL_POINTS
@@ -247,6 +302,12 @@ export function updateOrbitalState(
     orbitsCompleted,
     simTime: state.simTime + dt,
     orbitalPeriod,
+    eccentricity,
+    semiMajorAxis,
+    apogee,
+    perigee,
+    specificEnergy,
+    acceleration: accelMag,
   }
 }
 

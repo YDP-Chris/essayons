@@ -179,6 +179,19 @@ function drawPlanet(
   ctx.setLineDash([])
 }
 
+/**
+ * Interpolate between blue (slow) and red (fast) based on a 0-1 factor.
+ * 0 = blue (#3b82f6), 1 = red (#ef4444).
+ */
+function speedColor(t: number): { r: number; g: number; b: number } {
+  // Blue: rgb(59, 130, 246)  Red: rgb(239, 68, 68)
+  return {
+    r: Math.round(59 + (239 - 59) * t),
+    g: Math.round(130 + (68 - 130) * t),
+    b: Math.round(246 + (68 - 246) * t),
+  }
+}
+
 function drawTrail(
   ctx: CanvasRenderingContext2D,
   state: OrbitalState,
@@ -187,17 +200,27 @@ function drawTrail(
   const { trail } = state
   if (trail.length < 2) return
 
+  // Find min/max speed across trail for color normalization
+  let minSpeed = Infinity
+  let maxSpeed = -Infinity
+  for (const pt of trail) {
+    if (pt.speed < minSpeed) minSpeed = pt.speed
+    if (pt.speed > maxSpeed) maxSpeed = pt.speed
+  }
+  const speedRange = maxSpeed - minSpeed
+
   ctx.lineWidth = TRAIL_LINE_WIDTH
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
 
   for (let i = 1; i < trail.length; i++) {
-    const prev = trail[i - 1]
-    const curr = trail[i]
-    if (!prev || !curr) continue
+    const prev = trail[i - 1]!
+    const curr = trail[i]!
 
-    const alpha = i / trail.length
-    ctx.strokeStyle = `rgba(245, 158, 11, ${alpha * 0.8})`
+    const alpha = (i / trail.length) * 0.8
+    const t = speedRange > 0 ? (curr.speed - minSpeed) / speedRange : 0.5
+    const c = speedColor(t)
+    ctx.strokeStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${alpha})`
     ctx.beginPath()
 
     const p1 = worldToScreen(prev.x, prev.y, transform)
@@ -206,6 +229,63 @@ function drawTrail(
     ctx.lineTo(p2.sx, p2.sy)
     ctx.stroke()
   }
+}
+
+function drawApseMarkers(
+  ctx: CanvasRenderingContext2D,
+  state: OrbitalState,
+  transform: ViewTransform,
+): void {
+  const { trail, planet } = state
+  // Only show markers when at least half an orbit has been swept
+  if (Math.abs(state.totalAngle) < Math.PI) return
+  if (trail.length < 2) return
+
+  let apogeeIdx = 0
+  let perigeeIdx = 0
+  let maxDist = -Infinity
+  let minDist = Infinity
+
+  for (let i = 0; i < trail.length; i++) {
+    const pt = trail[i]!
+    const d = Math.sqrt((pt.x - planet.x) ** 2 + (pt.y - planet.y) ** 2)
+    if (d > maxDist) {
+      maxDist = d
+      apogeeIdx = i
+    }
+    if (d < minDist) {
+      minDist = d
+      perigeeIdx = i
+    }
+  }
+
+  const ACCENT = '#00D4AA'
+  const MARKER_SIZE = 5
+
+  // Draw diamond marker + label for a given trail point
+  const drawMarker = (idx: number, label: string) => {
+    const pt = trail[idx]!
+    const pos = worldToScreen(pt.x, pt.y, transform)
+
+    // Diamond shape
+    ctx.fillStyle = ACCENT
+    ctx.beginPath()
+    ctx.moveTo(pos.sx, pos.sy - MARKER_SIZE)
+    ctx.lineTo(pos.sx + MARKER_SIZE, pos.sy)
+    ctx.lineTo(pos.sx, pos.sy + MARKER_SIZE)
+    ctx.lineTo(pos.sx - MARKER_SIZE, pos.sy)
+    ctx.closePath()
+    ctx.fill()
+
+    // Label
+    ctx.font = '10px monospace'
+    ctx.textAlign = 'center'
+    ctx.fillStyle = ACCENT
+    ctx.fillText(label, pos.sx, pos.sy - MARKER_SIZE - 4)
+  }
+
+  drawMarker(apogeeIdx, 'AP')
+  drawMarker(perigeeIdx, 'PE')
 }
 
 function drawSatellite(
@@ -351,7 +431,12 @@ function drawCrashEffect(ctx: CanvasRenderingContext2D, width: number, height: n
   ctx.fillRect(0, 0, width, height)
 }
 
-function drawHud(ctx: CanvasRenderingContext2D, state: OrbitalState, width: number): void {
+function drawHud(
+  ctx: CanvasRenderingContext2D,
+  state: OrbitalState,
+  width: number,
+  showMetrics: boolean,
+): void {
   const { satellite, planet } = state
   const dist = Math.sqrt((satellite.x - planet.x) ** 2 + (satellite.y - planet.y) ** 2)
   const altitude = dist - planet.radius
@@ -360,21 +445,51 @@ function drawHud(ctx: CanvasRenderingContext2D, state: OrbitalState, width: numb
   ctx.font = '13px monospace'
   ctx.textAlign = 'right'
 
-  const lines = [
-    `Alt: ${(altitude / 1000).toFixed(1)} km`,
-    `Vel: ${speed.toFixed(0)} m/s`,
-    `Orbits: ${state.orbitsCompleted}`,
-    `Time: ${state.simTime.toFixed(1)} s`,
+  // Basic telemetry (always shown)
+  const lines: Array<{ text: string; color?: string }> = [
+    { text: `Alt: ${(altitude / 1000).toFixed(1)} km` },
+    { text: `Vel: ${speed.toFixed(0)} m/s` },
+    { text: `Orbits: ${state.orbitsCompleted}` },
+    { text: `Time: ${state.simTime.toFixed(1)} s` },
   ]
 
   if (state.orbitalPeriod > 0 && !state.escaped) {
-    lines.push(`Period: ${(state.orbitalPeriod / 60).toFixed(1)} min`)
+    lines.push({ text: `Period: ${(state.orbitalPeriod / 60).toFixed(1)} min` })
+  }
+
+  // Expanded metrics (when toggle is on)
+  if (showMetrics) {
+    const isBound = state.specificEnergy < 0 && !state.escaped
+
+    lines.push({
+      text: `Ecc: ${isBound ? state.eccentricity.toFixed(4) : '---'}`,
+      color: '#00D4AA',
+    })
+    lines.push({
+      text: `Apogee: ${isBound ? (state.apogee / 1000).toFixed(1) + ' km' : '---'}`,
+      color: '#00D4AA',
+    })
+    lines.push({
+      text: `Perigee: ${isBound ? (state.perigee / 1000).toFixed(1) + ' km' : '---'}`,
+      color: '#00D4AA',
+    })
+    // Energy in MJ/kg (specific energy / 1e6)
+    const energyMJ = state.specificEnergy / 1e6
+    const sign = energyMJ >= 0 ? '+' : ''
+    lines.push({
+      text: `Energy: ${sign}${energyMJ.toFixed(2)} MJ/kg`,
+      color: '#00D4AA',
+    })
+    lines.push({
+      text: `Accel: ${state.acceleration.toFixed(2)} m/s\u00B2`,
+      color: '#00D4AA',
+    })
   }
 
   if (state.crashed) {
-    lines.push('STATUS: CRASHED')
+    lines.push({ text: 'STATUS: CRASHED', color: '#ef4444' })
   } else if (state.escaped) {
-    lines.push('STATUS: ESCAPED')
+    lines.push({ text: 'STATUS: ESCAPED', color: '#22c55e' })
   }
 
   const x = width - 16
@@ -383,17 +498,13 @@ function drawHud(ctx: CanvasRenderingContext2D, state: OrbitalState, width: numb
   // Background for readability
   const lineHeight = 18
   const boxHeight = lines.length * lineHeight + 8
-  const boxWidth = 180
+  const boxWidth = 220
   ctx.fillStyle = 'rgba(10, 10, 26, 0.7)'
   ctx.fillRect(x - boxWidth, y - 14, boxWidth + 8, boxHeight)
 
   for (const line of lines) {
-    const isCrashed = line.includes('CRASHED')
-    const isEscaped = line.includes('ESCAPED')
-
-    ctx.fillStyle = isCrashed ? '#ef4444' : isEscaped ? '#22c55e' : COLORS.text
-
-    ctx.fillText(line, x, y)
+    ctx.fillStyle = line.color ?? COLORS.text
+    ctx.fillText(line.text, x, y)
     y += lineHeight
   }
 }
@@ -416,6 +527,7 @@ export function renderOrbitLab(
 
   const showTrail = (params['show-trail'] as boolean | undefined) ?? true
   const showVectors = (params['show-vectors'] as boolean | undefined) ?? false
+  const showMetrics = (params['show-metrics'] as boolean | undefined) ?? true
 
   // 1. Background
   drawBackground(ctx, width, height)
@@ -425,22 +537,27 @@ export function renderOrbitLab(
     drawTrail(ctx, state, transform)
   }
 
-  // 3. Planet
+  // 3. Apogee/perigee markers (on top of trail, behind planet)
+  if (showTrail) {
+    drawApseMarkers(ctx, state, transform)
+  }
+
+  // 4. Planet
   drawPlanet(ctx, state, transform)
 
-  // 4. Satellite
+  // 5. Satellite
   drawSatellite(ctx, state, transform)
 
-  // 5. Vectors
+  // 6. Vectors
   if (showVectors) {
     drawVectors(ctx, state, transform)
   }
 
-  // 6. Crash effect
+  // 7. Crash effect
   if (state.crashed) {
     drawCrashEffect(ctx, width, height)
   }
 
-  // 7. HUD
-  drawHud(ctx, state, width)
+  // 8. HUD
+  drawHud(ctx, state, width, showMetrics)
 }
