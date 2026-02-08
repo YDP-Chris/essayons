@@ -12,11 +12,11 @@ import type { OrbitalState } from './physics.ts'
 // Constants
 // ---------------------------------------------------------------------------
 
-const PLANET_MIN_DISPLAY_RADIUS = 80
-const SATELLITE_RADIUS = 5
+const SATELLITE_MIN_RADIUS = 4
+const SATELLITE_GLOW_MULTIPLIER = 3
 const VECTOR_SCALE = 0.00004
 const TRAIL_LINE_WIDTH = 1.5
-const VIEW_PADDING = 1.4
+const VIEW_PADDING = 1.3
 
 // ---------------------------------------------------------------------------
 // Colors
@@ -27,6 +27,7 @@ const COLORS = {
   planet: '#2563eb',
   planetGlow: 'rgba(37, 99, 235, 0.15)',
   planetAtmosphere: 'rgba(100, 180, 255, 0.08)',
+  surfaceRing: 'rgba(100, 180, 255, 0.25)',
   satellite: '#f59e0b',
   satelliteGlow: 'rgba(245, 158, 11, 0.6)',
   trailStart: 'rgba(245, 158, 11, 0.8)',
@@ -46,26 +47,32 @@ interface ViewTransform {
   readonly scale: number
   readonly offsetX: number
   readonly offsetY: number
+  readonly planetScreenRadius: number
 }
 
 function computeViewTransform(state: OrbitalState, width: number, height: number): ViewTransform {
-  // Determine the bounding extent that should be visible
-  const { satellite, planet } = state
+  const { satellite, planet, trail } = state
 
-  const maxDist = Math.max(
-    Math.sqrt(satellite.x * satellite.x + satellite.y * satellite.y),
-    planet.radius * 2,
-  )
+  // Find the max distance from center across trail + current satellite position.
+  // This gives a stable view that encompasses the full orbit path so far.
+  let maxDist = Math.sqrt(satellite.x * satellite.x + satellite.y * satellite.y)
+  for (const point of trail) {
+    const d = Math.sqrt(point.x * point.x + point.y * point.y)
+    if (d > maxDist) maxDist = d
+  }
+
+  // Ensure the planet is always fully visible with a small margin
+  maxDist = Math.max(maxDist, planet.radius * 1.05)
 
   const viewExtent = maxDist * VIEW_PADDING
   const minDimension = Math.min(width, height)
-
   const scale = minDimension / (2 * viewExtent)
 
   return {
     scale,
     offsetX: width / 2,
     offsetY: height / 2,
+    planetScreenRadius: planet.radius * scale,
   }
 }
 
@@ -110,7 +117,8 @@ function drawPlanet(
 ): void {
   const { planet } = state
   const center = worldToScreen(planet.x, planet.y, transform)
-  const displayRadius = Math.max(planet.radius * transform.scale, PLANET_MIN_DISPLAY_RADIUS)
+  // Use true-scale radius — no artificial minimum
+  const displayRadius = transform.planetScreenRadius
 
   // Atmosphere glow (outer)
   const atmosphereGradient = ctx.createRadialGradient(
@@ -160,6 +168,15 @@ function drawPlanet(
   ctx.beginPath()
   ctx.arc(center.sx, center.sy, displayRadius, 0, 2 * Math.PI)
   ctx.fill()
+
+  // Surface ring — thin line at the planet's edge for altitude reference
+  ctx.strokeStyle = COLORS.surfaceRing
+  ctx.lineWidth = 1
+  ctx.setLineDash([4, 4])
+  ctx.beginPath()
+  ctx.arc(center.sx, center.sy, displayRadius, 0, 2 * Math.PI)
+  ctx.stroke()
+  ctx.setLineDash([])
 }
 
 function drawTrail(
@@ -200,27 +217,22 @@ function drawSatellite(
 
   const { satellite } = state
   const pos = worldToScreen(satellite.x, satellite.y, transform)
+  const radius = Math.max(SATELLITE_MIN_RADIUS, 3)
+  const glowRadius = radius * SATELLITE_GLOW_MULTIPLIER
 
   // Glow
-  const glowGradient = ctx.createRadialGradient(
-    pos.sx,
-    pos.sy,
-    0,
-    pos.sx,
-    pos.sy,
-    SATELLITE_RADIUS * 3,
-  )
+  const glowGradient = ctx.createRadialGradient(pos.sx, pos.sy, 0, pos.sx, pos.sy, glowRadius)
   glowGradient.addColorStop(0, COLORS.satelliteGlow)
   glowGradient.addColorStop(1, 'transparent')
   ctx.fillStyle = glowGradient
   ctx.beginPath()
-  ctx.arc(pos.sx, pos.sy, SATELLITE_RADIUS * 3, 0, 2 * Math.PI)
+  ctx.arc(pos.sx, pos.sy, glowRadius, 0, 2 * Math.PI)
   ctx.fill()
 
   // Body
   ctx.fillStyle = COLORS.satellite
   ctx.beginPath()
-  ctx.arc(pos.sx, pos.sy, SATELLITE_RADIUS, 0, 2 * Math.PI)
+  ctx.arc(pos.sx, pos.sy, radius, 0, 2 * Math.PI)
   ctx.fill()
 
   // Direction indicator (small line in direction of travel)
@@ -233,8 +245,8 @@ function drawSatellite(
     ctx.beginPath()
     ctx.moveTo(pos.sx, pos.sy)
     ctx.lineTo(
-      pos.sx + dirX * SATELLITE_RADIUS * 3,
-      pos.sy - dirY * SATELLITE_RADIUS * 3, // flip Y
+      pos.sx + dirX * glowRadius,
+      pos.sy - dirY * glowRadius, // flip Y
     )
     ctx.stroke()
   }
@@ -345,7 +357,7 @@ function drawHud(ctx: CanvasRenderingContext2D, state: OrbitalState, width: numb
   const altitude = dist - planet.radius
   const speed = Math.sqrt(satellite.vx ** 2 + satellite.vy ** 2)
 
-  ctx.font = '12px monospace'
+  ctx.font = '13px monospace'
   ctx.textAlign = 'right'
 
   const lines = [
@@ -368,14 +380,21 @@ function drawHud(ctx: CanvasRenderingContext2D, state: OrbitalState, width: numb
   const x = width - 16
   let y = 24
 
+  // Background for readability
+  const lineHeight = 18
+  const boxHeight = lines.length * lineHeight + 8
+  const boxWidth = 180
+  ctx.fillStyle = 'rgba(10, 10, 26, 0.7)'
+  ctx.fillRect(x - boxWidth, y - 14, boxWidth + 8, boxHeight)
+
   for (const line of lines) {
     const isCrashed = line.includes('CRASHED')
     const isEscaped = line.includes('ESCAPED')
 
-    ctx.fillStyle = isCrashed ? '#ef4444' : isEscaped ? '#22c55e' : COLORS.textDim
+    ctx.fillStyle = isCrashed ? '#ef4444' : isEscaped ? '#22c55e' : COLORS.text
 
     ctx.fillText(line, x, y)
-    y += 18
+    y += lineHeight
   }
 }
 
