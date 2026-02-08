@@ -21,7 +21,7 @@
 .tutorial-overlay__backdrop {
   position: absolute;
   inset: 0;
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 /* SVG spotlight mask fills the viewport */

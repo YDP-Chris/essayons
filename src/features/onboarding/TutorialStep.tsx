@@ -175,8 +175,9 @@ export function TutorialStepComponent({
   const contentId = `tutorial-content-${step.id}`
 
   return (
-    <div className="tutorial-overlay" data-testid="tutorial-overlay">
-      {/* SVG spotlight mask */}
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+    <div className="tutorial-overlay" data-testid="tutorial-overlay" onClick={onSkip}>
+      {/* SVG spotlight mask — purely visual, pointer-events: none in CSS */}
       <svg className="tutorial-overlay__backdrop tutorial-overlay__mask" aria-hidden="true">
         <defs>
           <mask id={`spotlight-mask-${step.id}`}>
@@ -205,6 +206,7 @@ export function TutorialStepComponent({
       </svg>
 
       {/* Tooltip — uses CSS animation for fade-in on mount */}
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */}
       <div
         ref={tooltipRef}
         className={[
@@ -220,6 +222,7 @@ export function TutorialStepComponent({
         aria-describedby={contentId}
         aria-modal="true"
         data-testid="tutorial-tooltip"
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="tutorial-tooltip__counter">
           Step {stepNumber} of {totalSteps}
