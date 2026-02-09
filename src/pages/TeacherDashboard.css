@@ -1,38 +1,5 @@
 /* Teacher Dashboard Styles — mobile-first responsive layout */
 
-/* ---- Navigation ---- */
-.teach-dashboard__nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
-  background-color: var(--color-bg-elevated);
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.teach-dashboard__wordmark {
-  font-family: var(--font-display);
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--color-text-primary);
-}
-
-.teach-dashboard__back {
-  background: none;
-  border: none;
-  font-family: var(--font-body);
-  font-size: 0.875rem;
-  color: var(--color-action-primary);
-  cursor: pointer;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  transition: background-color var(--transition-fast);
-}
-
-.teach-dashboard__back:hover {
-  background-color: var(--color-bg-secondary);
-}
-
 /* ---- Main content ---- */
 .teach-dashboard__main {
   max-width: 1280px;
@@ -387,10 +354,6 @@
 
 /* ---- Responsive: Tablet ---- */
 @media (min-width: 768px) {
-  .teach-dashboard__nav {
-    padding: var(--space-3) var(--space-6);
-  }
-
   .teach-dashboard__main {
     padding: var(--space-8) var(--space-6);
   }
@@ -408,10 +371,6 @@
 
 /* ---- Responsive: Desktop ---- */
 @media (min-width: 1024px) {
-  .teach-dashboard__nav {
-    padding: var(--space-3) var(--space-8);
-  }
-
   .teach-dashboard__main {
     padding: var(--space-8) var(--space-8);
   }
@@ -419,7 +378,6 @@
 
 /* ---- Print styles ---- */
 @media print {
-  .teach-dashboard__nav,
   .link-gen,
   .seq-builder,
   .progress-viewer,

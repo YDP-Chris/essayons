@@ -5,13 +5,13 @@ import { TeacherSection } from '@/components/landing/TeacherSection'
 import { Footer } from '@/components/landing/Footer'
 import { LazyEpisodeShell } from '@/episodes/LazyEpisodeShell'
 import { TeacherDashboard } from '@/pages/TeacherDashboard'
+import { SiteHeader } from '@/components/ui/SiteHeader'
 import { useRoute, navigate } from '@/shared/router'
 import { PerformanceOverlay } from '@/dev/PerformanceOverlay'
 import { installMemoryMonitor } from '@/dev/memory-monitor'
 import { useTutorial } from '@/features/onboarding/use-tutorial.ts'
 import { resetTutorial } from '@/features/onboarding/tutorial-storage.ts'
 import { LocaleProvider, useTranslation } from '@/i18n'
-import { LocaleSwitcher } from '@/components/ui/LocaleSwitcher'
 
 // Install memory monitor in dev mode
 if (import.meta.env.DEV) {
@@ -32,13 +32,9 @@ function EpisodeRoute({ episodeId }: { readonly episodeId: string }) {
   }
 
   return (
-    <div className="app">
+    <>
       {import.meta.env.DEV && <PerformanceOverlay />}
-      <nav className="episode-nav">
-        <button className="episode-nav__back" onClick={() => navigate('/')} type="button">
-          &larr; {t('nav.backToLabs')}
-        </button>
-        <LocaleSwitcher />
+      <div className="episode-nav">
         <button
           className="episode-nav__restart-tutorial"
           onClick={handleRestartTutorial}
@@ -46,11 +42,11 @@ function EpisodeRoute({ episodeId }: { readonly episodeId: string }) {
         >
           {t('nav.restartTutorial')}
         </button>
-      </nav>
+      </div>
       <main id="main-content">
         <LazyEpisodeShell episodeId={episodeId} tutorial={tutorial} />
       </main>
-    </div>
+    </>
   )
 }
 
@@ -62,28 +58,31 @@ function AppContent() {
   const route = useRoute()
   const { t } = useTranslation()
 
-  if (route.route === 'teach') {
-    return <TeacherDashboard />
-  }
-
-  if (route.route === 'episode') {
-    return <EpisodeRoute episodeId={route.params.id!} />
-  }
+  const variant = route.route === 'episode' ? 'compact' : 'full'
 
   return (
     <div className="app">
-      {import.meta.env.DEV && <PerformanceOverlay />}
       <a className="skip-to-content" href="#main-content">
         {t('nav.skipToContent')}
       </a>
-      <LocaleSwitcher />
-      <main id="main-content">
-        <HeroSection />
-        <EpisodeGrid onSelectEpisode={(id) => navigate(`/episode/${id}`)} />
-        <ValueProps />
-        <TeacherSection />
-      </main>
-      <Footer />
+      <SiteHeader variant={variant} currentRoute={route.route} />
+
+      {route.route === 'teach' && <TeacherDashboard />}
+
+      {route.route === 'episode' && <EpisodeRoute episodeId={route.params.id!} />}
+
+      {route.route !== 'teach' && route.route !== 'episode' && (
+        <>
+          {import.meta.env.DEV && <PerformanceOverlay />}
+          <main id="main-content">
+            <HeroSection />
+            <EpisodeGrid onSelectEpisode={(id) => navigate(`/episode/${id}`)} />
+            <ValueProps />
+            <TeacherSection />
+          </main>
+          <Footer />
+        </>
+      )}
     </div>
   )
 }

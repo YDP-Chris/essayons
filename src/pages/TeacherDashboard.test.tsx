@@ -1,19 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { TeacherDashboard } from './TeacherDashboard.tsx'
 import { LocaleProvider } from '@/i18n'
-
-// Mock the navigate function
-vi.mock('@/shared/router/router.ts', async () => {
-  const actual = await vi.importActual<typeof import('@/shared/router/router.ts')>(
-    '@/shared/router/router.ts',
-  )
-  return {
-    ...actual,
-    navigate: vi.fn(),
-  }
-})
 
 // Register at least one episode so the dashboard has content
 vi.mock('@/episodes/registry.ts', async () => {
@@ -70,38 +58,6 @@ describe('TeacherDashboard', () => {
       </LocaleProvider>,
     )
     expect(screen.getByText('Teacher Dashboard')).toBeInTheDocument()
-  })
-
-  it('displays the Essayons wordmark in the nav', () => {
-    render(
-      <LocaleProvider>
-        <TeacherDashboard />
-      </LocaleProvider>,
-    )
-    expect(screen.getByText('Essayons')).toBeInTheDocument()
-  })
-
-  it('displays a Back to Labs button', () => {
-    render(
-      <LocaleProvider>
-        <TeacherDashboard />
-      </LocaleProvider>,
-    )
-    const backBtn = screen.getByRole('button', { name: /back to labs/i })
-    expect(backBtn).toBeInTheDocument()
-  })
-
-  it('navigates to landing when Back to Labs is clicked', async () => {
-    const { navigate } = await import('@/shared/router/router.ts')
-    const user = userEvent.setup()
-    render(
-      <LocaleProvider>
-        <TeacherDashboard />
-      </LocaleProvider>,
-    )
-
-    await user.click(screen.getByRole('button', { name: /back to labs/i }))
-    expect(navigate).toHaveBeenCalledWith('/')
   })
 
   it('renders the Link Generator section', () => {

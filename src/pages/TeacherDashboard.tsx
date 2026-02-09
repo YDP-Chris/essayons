@@ -6,7 +6,6 @@
  */
 
 import { useState, useCallback } from 'react'
-import { navigate } from '@/shared/router/router.ts'
 import { useTranslation } from '@/i18n'
 import { LinkGenerator } from '@/components/teacher/LinkGenerator.tsx'
 import { SequenceBuilder } from '@/components/teacher/SequenceBuilder.tsx'
@@ -24,13 +23,6 @@ export function TeacherDashboard() {
 
   return (
     <div className="teach-dashboard">
-      <nav className="teach-dashboard__nav">
-        <span className="teach-dashboard__wordmark">{t('teacherDashboard.wordmark')}</span>
-        <button type="button" className="teach-dashboard__back" onClick={() => navigate('/')}>
-          &larr; {t('nav.backToLabs')}
-        </button>
-      </nav>
-
       <main className="teach-dashboard__main">
         <h1 className="teach-dashboard__title">{t('teacherDashboard.title')}</h1>
 

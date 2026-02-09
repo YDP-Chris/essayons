@@ -76,9 +76,25 @@ describe('App', () => {
     expect(screen.getByRole('main')).toBeInTheDocument()
   })
 
-  it('renders episode shell when hash is set to episode route', () => {
+  it('renders site header on landing page', () => {
+    render(<App />)
+    expect(screen.getByRole('banner')).toBeInTheDocument()
+  })
+
+  it('renders site header with nav links on landing page', () => {
+    render(<App />)
+    // Nav links appear in both desktop and mobile sections of the header
+    const episodesLinks = screen.getAllByText('Episodes')
+    expect(episodesLinks.length).toBeGreaterThanOrEqual(1)
+    const teachLinks = screen.getAllByText('Teacher Dashboard')
+    expect(teachLinks.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('renders compact site header on episode route', () => {
     window.location.hash = '#/episode/orbit-lab'
     render(<App />)
-    expect(screen.getByText(/Back to Labs/)).toBeInTheDocument()
+    const header = screen.getByRole('banner')
+    expect(header).toBeInTheDocument()
+    expect(header.className).toContain('site-header--compact')
   })
 })
