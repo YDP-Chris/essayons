@@ -84,7 +84,7 @@ export function trackEvent<E extends AnalyticsEventName>(
 // ---------------------------------------------------------------------------
 
 export function trackSimulationInteraction(
-  action: 'play' | 'pause' | 'reset',
+  action: 'play' | 'pause' | 'reset' | 'relaunch',
   episodeId: string,
 ): void {
   trackEvent('Simulation:Interaction', { action, episodeId })

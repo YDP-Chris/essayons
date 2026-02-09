@@ -161,7 +161,7 @@ describe('OnboardingTutorial', () => {
 
     expect(screen.getByTestId('tutorial-progress')).toBeInTheDocument()
     // Dots should not exist
-    expect(screen.queryByClassName?.('tutorial-tooltip__dots')).toBeFalsy()
+    expect(document.querySelector('.tutorial-tooltip__dots')).toBeFalsy()
   })
 
   it('progress bar has correct number of segments', () => {

@@ -22,7 +22,7 @@ declare global {
 // ---------------------------------------------------------------------------
 
 export interface SimulationInteractionProps {
-  readonly action: 'play' | 'pause' | 'reset'
+  readonly action: 'play' | 'pause' | 'reset' | 'relaunch'
   readonly episodeId: string
 }
 
