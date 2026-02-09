@@ -20,6 +20,7 @@ export { CloseIcon } from './ui/CloseIcon'
 export { ChevronIcon } from './ui/ChevronIcon'
 export { CheckIcon } from './ui/CheckIcon'
 export { HintIcon } from './ui/HintIcon'
+export { RelaunchIcon } from './ui/RelaunchIcon'
 
 // Auto-register all icons
 import { registerIcon } from './icon-registry'
@@ -37,6 +38,7 @@ import { CloseIcon } from './ui/CloseIcon'
 import { ChevronIcon } from './ui/ChevronIcon'
 import { CheckIcon } from './ui/CheckIcon'
 import { HintIcon } from './ui/HintIcon'
+import { RelaunchIcon } from './ui/RelaunchIcon'
 
 // Register domain icons
 registerIcon('physics', PhysicsIcon)
@@ -55,3 +57,4 @@ registerIcon('close', CloseIcon)
 registerIcon('chevron', ChevronIcon)
 registerIcon('check', CheckIcon)
 registerIcon('hint', HintIcon)
+registerIcon('relaunch', RelaunchIcon)

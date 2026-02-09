@@ -218,6 +218,48 @@ export class SimulationEngine implements SimulationEngineInterface, Subscribable
     }
   }
 
+  /**
+   * Relaunch the simulation: reinitialize physics with current params while
+   * preserving the currently active mission. Unlike `reset()` which always
+   * restarts from mission 1, relaunch keeps the user on their current mission
+   * so they can iterate on parameter adjustments without losing their place.
+   */
+  relaunch(): void {
+    if (!this._episode) return
+
+    // Remember the current active mission before resetting
+    const currentMissionId = this.missions.activeMissionId
+
+    // Stop the loop and reset time
+    this.stop()
+    this.time.reset()
+    this._accumulator = 0
+    this._frameTimes = []
+    this._fps = 0
+    this.quality.reset()
+
+    // Recreate physics state with current parameter values
+    this._physicsState = this._episode.createInitialState(this.parameters.getAll())
+
+    // Reset mission objectives but restart the CURRENT mission (not the first)
+    this.missions.reset()
+    if (currentMissionId) {
+      this.missions.startMission(currentMissionId)
+    } else if (this._episode.missions.length > 0) {
+      // Fallback: no active mission, start the first one
+      const firstMission = this._episode.missions[0]
+      if (firstMission) {
+        this.missions.startMission(firstMission.id)
+      }
+    }
+
+    // Restart the render loop but pause so the user can press Play
+    this.start()
+    this.time.pause()
+
+    this._notify()
+  }
+
   /** Destroy the engine, cleaning up all resources. */
   destroy(): void {
     this.stop()

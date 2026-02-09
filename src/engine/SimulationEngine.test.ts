@@ -372,4 +372,199 @@ describe('SimulationEngine', () => {
       expect(episode.update).toHaveBeenCalled()
     })
   })
+
+  describe('relaunch', () => {
+    it('should recreate physics state with current params', () => {
+      const episode = createTestEpisode({
+        parameters: [
+          {
+            type: 'number',
+            key: 'velocity',
+            label: 'Velocity',
+            default: 1,
+            min: 0,
+            max: 100,
+            step: 1,
+          },
+        ],
+        createInitialState: vi.fn((params?: ParamValues) => ({
+          position: 0,
+          velocity: params?.['velocity'] ?? 1,
+        })),
+      })
+      engine.loadEpisode(episode)
+      engine.start()
+
+      // Run some frames to advance state
+      fireRaf(0)
+      fireRaf(100)
+
+      // Change a parameter
+      engine.setParameterValue('velocity', 42)
+
+      // Relaunch
+      engine.relaunch()
+
+      // createInitialState should have been called with current params
+      const calls = vi.mocked(episode.createInitialState).mock.calls
+      const lastCall = calls[calls.length - 1]!
+      expect(lastCall[0]).toHaveProperty('velocity', 42)
+
+      // Physics state should reflect new value
+      expect(engine.physicsState).toEqual({ position: 0, velocity: 42 })
+    })
+
+    it('should reset simulation time to 0', () => {
+      const episode = createTestEpisode()
+      engine.loadEpisode(episode)
+      engine.start()
+
+      // Run some frames to advance time
+      fireRaf(0)
+      fireRaf(100)
+
+      expect(engine.getSnapshot().simulationTime).toBeGreaterThan(0)
+
+      engine.relaunch()
+
+      expect(engine.getSnapshot().simulationTime).toBe(0)
+    })
+
+    it('should preserve the active mission ID (not switch to first mission)', () => {
+      const episode = createTestEpisode({
+        missions: [
+          {
+            id: 'mission-1',
+            name: 'Mission 1',
+            description: 'First mission',
+            objectives: [{ id: 'obj-1', label: 'Objective 1' }],
+            evaluate: () => [{ id: 'obj-1', status: 'pending' as ObjectiveStatus }],
+          },
+          {
+            id: 'mission-2',
+            name: 'Mission 2',
+            description: 'Second mission',
+            objectives: [{ id: 'obj-2', label: 'Objective 2' }],
+            evaluate: () => [{ id: 'obj-2', status: 'pending' as ObjectiveStatus }],
+          },
+          {
+            id: 'mission-3',
+            name: 'Mission 3',
+            description: 'Third mission',
+            objectives: [{ id: 'obj-3', label: 'Objective 3' }],
+            evaluate: () => [{ id: 'obj-3', status: 'pending' as ObjectiveStatus }],
+          },
+        ],
+      })
+
+      engine.loadEpisode(episode)
+
+      // Switch to mission 3
+      engine.missions.startMission('mission-3')
+      expect(engine.missions.activeMissionId).toBe('mission-3')
+
+      engine.start()
+      fireRaf(0)
+      fireRaf(100)
+
+      // Relaunch should preserve mission 3
+      engine.relaunch()
+
+      expect(engine.missions.activeMissionId).toBe('mission-3')
+    })
+
+    it('should reset mission objectives to pending', () => {
+      let shouldComplete = false
+      const episode = createTestEpisode({
+        missions: [
+          {
+            id: 'mission-1',
+            name: 'Mission 1',
+            description: 'Test mission',
+            objectives: [
+              { id: 'obj-1', label: 'Objective 1' },
+              { id: 'obj-2', label: 'Objective 2' },
+            ],
+            evaluate: () => {
+              if (shouldComplete) {
+                return [
+                  { id: 'obj-1', status: 'completed' as ObjectiveStatus },
+                  { id: 'obj-2', status: 'completed' as ObjectiveStatus },
+                ]
+              }
+              return [
+                { id: 'obj-1', status: 'pending' as ObjectiveStatus },
+                { id: 'obj-2', status: 'pending' as ObjectiveStatus },
+              ]
+            },
+          },
+        ],
+      })
+
+      engine.loadEpisode(episode)
+      engine.start()
+      fireRaf(0)
+
+      // Complete the mission
+      shouldComplete = true
+      fireRaf(16.67)
+      expect(engine.missions.phase).toBe('success')
+
+      // Relaunch should reset objectives to pending
+      shouldComplete = false
+      engine.relaunch()
+
+      const snapshot = engine.getSnapshot()
+      expect(snapshot.missionState.phase).toBe('active')
+      for (const obj of snapshot.missionState.objectives) {
+        expect(obj.status).toBe('pending')
+      }
+    })
+
+    it('should be running but paused after relaunch', () => {
+      const episode = createTestEpisode()
+      engine.loadEpisode(episode)
+      engine.start()
+      fireRaf(0)
+      fireRaf(100)
+
+      engine.relaunch()
+
+      expect(engine.running).toBe(true)
+      expect(engine.getSnapshot().paused).toBe(true)
+    })
+
+    it('should fall back to first mission when no mission is active', () => {
+      const episode = createTestEpisode({
+        missions: [
+          {
+            id: 'mission-1',
+            name: 'Mission 1',
+            description: 'First mission',
+            objectives: [{ id: 'obj-1', label: 'Objective 1' }],
+            evaluate: () => [{ id: 'obj-1', status: 'pending' as ObjectiveStatus }],
+          },
+        ],
+      })
+
+      engine.loadEpisode(episode)
+      // Reset missions to clear the active mission
+      engine.missions.reset()
+      expect(engine.missions.activeMissionId).toBeNull()
+
+      engine.start()
+      fireRaf(0)
+      fireRaf(100)
+
+      engine.relaunch()
+
+      // Should have fallen back to mission-1
+      expect(engine.missions.activeMissionId).toBe('mission-1')
+    })
+
+    it('should do nothing when no episode is loaded', () => {
+      // Engine without episode
+      expect(() => engine.relaunch()).not.toThrow()
+    })
+  })
 })
