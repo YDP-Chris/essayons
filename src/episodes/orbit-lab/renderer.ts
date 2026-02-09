@@ -4,10 +4,19 @@
  * Uses a fixed base scale (planet always visible) with user-controlled
  * zoom and pan. Draws altitude reference grid, speed-coded trail,
  * twinkling stars, orbit projection, rocket ship, and telemetry HUD.
+ *
+ * Planet rendering features:
+ * - Lit-sphere shading (directional highlight + shadow overlays)
+ * - Animated rotation driven by simTime
+ * - Multi-layered atmospheres per planet
+ * - Enhanced surface features: Bezier continents (Earth), Great Red Spot
+ *   (Jupiter), Cassini division (Saturn), mare regions (Moon), Valles
+ *   Marineris (Mars), layered clouds (Venus)
  */
 
 import { G } from './physics.ts'
 import type { OrbitalState } from './physics.ts'
+import { drawResponsiveHud, type HudCell } from '@/engine/hud-utils.ts'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -17,9 +26,25 @@ const VECTOR_SCALE = 0.00004
 const TRAIL_LINE_WIDTH = 1.5
 const PROJECTION_STEPS = 360
 
+/** Progressive detail thresholds based on displayRadius in pixels. */
+const DETAIL_LEVEL_BASIC = 4
+const DETAIL_LEVEL_SURFACE = 15
+const DETAIL_LEVEL_FINE = 25
+
 // ---------------------------------------------------------------------------
 // Planet Visual Profiles
 // ---------------------------------------------------------------------------
+
+interface AtmosphereLayer {
+  readonly radiusMultiplier: number
+  readonly color: string
+  readonly opacity: number
+}
+
+interface LightResponse {
+  readonly highlightIntensity: number // 0-1, how bright the specular highlight
+  readonly shadowIntensity: number // 0-1, how dark the shadow side
+}
 
 interface PlanetVisual {
   readonly bodyColors: [string, string, string] // gradient: highlight, mid, shadow
@@ -28,6 +53,9 @@ interface PlanetVisual {
   readonly hasBands: boolean
   readonly bandColor: string
   readonly hasCraters: boolean
+  readonly atmosphereLayers: readonly AtmosphereLayer[]
+  readonly rotationRate: number // revolutions per 60s of sim time
+  readonly lightResponse: LightResponse
 }
 
 const PLANET_VISUALS: Readonly<Record<string, PlanetVisual>> = {
@@ -38,6 +66,9 @@ const PLANET_VISUALS: Readonly<Record<string, PlanetVisual>> = {
     hasBands: false,
     bandColor: '',
     hasCraters: true,
+    atmosphereLayers: [],
+    rotationRate: 0.3,
+    lightResponse: { highlightIntensity: 0.15, shadowIntensity: 0.4 },
   },
   Mars: {
     bodyColors: ['#e8845a', '#c4522a', '#6b2010'],
@@ -46,6 +77,9 @@ const PLANET_VISUALS: Readonly<Record<string, PlanetVisual>> = {
     hasBands: false,
     bandColor: '',
     hasCraters: false,
+    atmosphereLayers: [{ radiusMultiplier: 1.06, color: 'rgba(230,140,80', opacity: 0.06 }],
+    rotationRate: 1.0,
+    lightResponse: { highlightIntensity: 0.2, shadowIntensity: 0.35 },
   },
   Earth: {
     bodyColors: ['#2196F3', '#1565C0', '#0a2744'],
@@ -54,6 +88,12 @@ const PLANET_VISUALS: Readonly<Record<string, PlanetVisual>> = {
     hasBands: false,
     bandColor: '',
     hasCraters: false,
+    atmosphereLayers: [
+      { radiusMultiplier: 1.12, color: 'rgba(60,160,255', opacity: 0.06 },
+      { radiusMultiplier: 1.06, color: 'rgba(100,200,255', opacity: 0.08 },
+    ],
+    rotationRate: 1.0,
+    lightResponse: { highlightIntensity: 0.35, shadowIntensity: 0.3 },
   },
   Venus: {
     bodyColors: ['#f5e6b8', '#d4a843', '#8a6b20'],
@@ -62,6 +102,13 @@ const PLANET_VISUALS: Readonly<Record<string, PlanetVisual>> = {
     hasBands: false,
     bandColor: '',
     hasCraters: false,
+    atmosphereLayers: [
+      { radiusMultiplier: 1.22, color: 'rgba(245,220,160', opacity: 0.05 },
+      { radiusMultiplier: 1.14, color: 'rgba(240,210,140', opacity: 0.08 },
+      { radiusMultiplier: 1.07, color: 'rgba(255,230,170', opacity: 0.1 },
+    ],
+    rotationRate: 0.5,
+    lightResponse: { highlightIntensity: 0.25, shadowIntensity: 0.25 },
   },
   Jupiter: {
     bodyColors: ['#e8c88a', '#c49a5a', '#7a5530'],
@@ -70,6 +117,9 @@ const PLANET_VISUALS: Readonly<Record<string, PlanetVisual>> = {
     hasBands: true,
     bandColor: '#b87a40',
     hasCraters: false,
+    atmosphereLayers: [{ radiusMultiplier: 1.08, color: 'rgba(200,160,100', opacity: 0.05 }],
+    rotationRate: 1.5,
+    lightResponse: { highlightIntensity: 0.2, shadowIntensity: 0.3 },
   },
   Saturn: {
     bodyColors: ['#f0d898', '#d4b060', '#8a7030'],
@@ -78,6 +128,9 @@ const PLANET_VISUALS: Readonly<Record<string, PlanetVisual>> = {
     hasBands: true,
     bandColor: '#c8a050',
     hasCraters: false,
+    atmosphereLayers: [{ radiusMultiplier: 1.08, color: 'rgba(220,190,120', opacity: 0.05 }],
+    rotationRate: 1.3,
+    lightResponse: { highlightIntensity: 0.2, shadowIntensity: 0.3 },
   },
 }
 
@@ -448,7 +501,725 @@ function drawOrbitProjection(
 }
 
 // ---------------------------------------------------------------------------
-// Planet
+// Planet — Enhanced rendering with lit-sphere shading, animated rotation,
+//          multi-layer atmospheres, and detailed surface features
+// ---------------------------------------------------------------------------
+
+/**
+ * Compute rotation phase from simTime and per-planet rotation rate.
+ * Returns radians representing how far features have rotated.
+ * One full revolution = 2*PI, default rate = 1 revolution per 60s sim time.
+ */
+function computeRotationPhase(simTime: number, rotationRate: number): number {
+  return ((simTime * rotationRate) / 60) * 2 * Math.PI
+}
+
+/**
+ * Apply rotation offset to a normalized X position (-1 to 1).
+ * Returns the new X position wrapped to [-1, 1] range.
+ * Returns null if the feature is on the far side (not visible).
+ */
+function rotateFeatureX(baseX: number, rotationPhase: number): number | null {
+  // Map rotation phase to a -1..1 offset using cosine for natural wrapping
+  const offset = Math.sin(rotationPhase) * 0.8
+  let newX = baseX + offset
+  // Wrap around
+  while (newX > 1) newX -= 2
+  while (newX < -1) newX += 2
+  // Only visible if within the disc (with foreshortening margin)
+  if (newX < -0.85 || newX > 0.85) return null
+  return newX
+}
+
+/** Draw multi-layer atmosphere system from PLANET_VISUALS config. */
+function drawAtmosphereLayers(
+  ctx: CanvasRenderingContext2D,
+  centerX: number,
+  centerY: number,
+  displayRadius: number,
+  layers: readonly AtmosphereLayer[],
+): void {
+  // Draw from outermost to innermost so inner layers overlay outer
+  for (let i = layers.length - 1; i >= 0; i--) {
+    const layer = layers[i]!
+    const layerRadius = displayRadius * layer.radiusMultiplier
+    const grad = ctx.createRadialGradient(
+      centerX,
+      centerY,
+      displayRadius * 0.85,
+      centerX,
+      centerY,
+      layerRadius,
+    )
+    grad.addColorStop(0, 'rgba(0,0,0,0)')
+    grad.addColorStop(0.4, `${layer.color},${layer.opacity})`)
+    grad.addColorStop(1, 'rgba(0,0,0,0)')
+    ctx.fillStyle = grad
+    ctx.beginPath()
+    ctx.arc(centerX, centerY, layerRadius, 0, 2 * Math.PI)
+    ctx.fill()
+  }
+}
+
+/** Draw lit-sphere highlight overlay (light from upper-left). */
+function drawHighlightOverlay(
+  ctx: CanvasRenderingContext2D,
+  centerX: number,
+  centerY: number,
+  displayRadius: number,
+  intensity: number,
+): void {
+  if (displayRadius < DETAIL_LEVEL_BASIC) return
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(centerX, centerY, displayRadius, 0, 2 * Math.PI)
+  ctx.clip()
+
+  const hlGrad = ctx.createRadialGradient(
+    centerX - displayRadius * 0.4,
+    centerY - displayRadius * 0.4,
+    0,
+    centerX - displayRadius * 0.1,
+    centerY - displayRadius * 0.1,
+    displayRadius * 0.9,
+  )
+  hlGrad.addColorStop(0, `rgba(255,255,255,${(0.35 * intensity).toFixed(3)})`)
+  hlGrad.addColorStop(0.5, `rgba(255,255,255,${(0.08 * intensity).toFixed(3)})`)
+  hlGrad.addColorStop(1, 'rgba(255,255,255,0)')
+  ctx.fillStyle = hlGrad
+  ctx.beginPath()
+  ctx.arc(centerX, centerY, displayRadius, 0, 2 * Math.PI)
+  ctx.fill()
+
+  ctx.restore()
+}
+
+/** Draw lit-sphere shadow overlay (shadow on lower-right). */
+function drawShadowOverlay(
+  ctx: CanvasRenderingContext2D,
+  centerX: number,
+  centerY: number,
+  displayRadius: number,
+  intensity: number,
+): void {
+  if (displayRadius < DETAIL_LEVEL_BASIC) return
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(centerX, centerY, displayRadius, 0, 2 * Math.PI)
+  ctx.clip()
+
+  const shGrad = ctx.createRadialGradient(
+    centerX + displayRadius * 0.3,
+    centerY + displayRadius * 0.3,
+    displayRadius * 0.2,
+    centerX + displayRadius * 0.15,
+    centerY + displayRadius * 0.15,
+    displayRadius * 1.1,
+  )
+  shGrad.addColorStop(0, `rgba(0,0,0,${(0.5 * intensity).toFixed(3)})`)
+  shGrad.addColorStop(0.6, `rgba(0,0,0,${(0.2 * intensity).toFixed(3)})`)
+  shGrad.addColorStop(1, 'rgba(0,0,0,0)')
+  ctx.fillStyle = shGrad
+  ctx.beginPath()
+  ctx.arc(centerX, centerY, displayRadius, 0, 2 * Math.PI)
+  ctx.fill()
+
+  ctx.restore()
+}
+
+// ---------------------------------------------------------------------------
+// Per-Planet Surface Feature Renderers
+// ---------------------------------------------------------------------------
+
+/** Draw Earth surface features: Bezier continents, ocean highlight, clouds. */
+function drawEarthFeatures(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  r: number,
+  phase: number,
+): void {
+  if (r < DETAIL_LEVEL_SURFACE) return
+
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(cx, cy, r, 0, 2 * Math.PI)
+  ctx.clip()
+
+  // --- Ocean specular highlight ---
+  const hlGrad = ctx.createRadialGradient(
+    cx - r * 0.35,
+    cy - r * 0.35,
+    0,
+    cx - r * 0.35,
+    cy - r * 0.35,
+    r * 0.3,
+  )
+  hlGrad.addColorStop(0, 'rgba(255,255,255,0.18)')
+  hlGrad.addColorStop(1, 'rgba(255,255,255,0)')
+  ctx.fillStyle = hlGrad
+  ctx.beginPath()
+  ctx.ellipse(cx - r * 0.3, cy - r * 0.3, r * 0.25, r * 0.18, 0.3, 0, 2 * Math.PI)
+  ctx.fill()
+
+  // --- Bezier continent: Eurasia-like mass ---
+  const eurasiaX = rotateFeatureX(-0.05, phase)
+  if (eurasiaX !== null) {
+    const bx = cx + eurasiaX * r
+    const by = cy - r * 0.25
+    ctx.fillStyle = 'rgba(34,139,34,0.3)'
+    ctx.beginPath()
+    ctx.moveTo(bx - r * 0.15, by - r * 0.05)
+    ctx.bezierCurveTo(
+      bx - r * 0.08,
+      by - r * 0.15,
+      bx + r * 0.1,
+      by - r * 0.12,
+      bx + r * 0.2,
+      by - r * 0.04,
+    )
+    ctx.bezierCurveTo(
+      bx + r * 0.22,
+      by + r * 0.02,
+      bx + r * 0.15,
+      by + r * 0.08,
+      bx + r * 0.05,
+      by + r * 0.1,
+    )
+    ctx.bezierCurveTo(
+      bx - r * 0.05,
+      by + r * 0.12,
+      bx - r * 0.18,
+      by + r * 0.06,
+      bx - r * 0.15,
+      by - r * 0.05,
+    )
+    ctx.closePath()
+    ctx.fill()
+  }
+
+  // --- Bezier continent: Africa-like mass ---
+  const africaX = rotateFeatureX(0.1, phase)
+  if (africaX !== null) {
+    const bx = cx + africaX * r
+    const by = cy + r * 0.05
+    ctx.fillStyle = 'rgba(34,139,34,0.3)'
+    ctx.beginPath()
+    ctx.moveTo(bx, by - r * 0.08)
+    ctx.bezierCurveTo(bx + r * 0.06, by - r * 0.06, bx + r * 0.08, by, bx + r * 0.05, by + r * 0.12)
+    ctx.bezierCurveTo(
+      bx + r * 0.02,
+      by + r * 0.16,
+      bx - r * 0.04,
+      by + r * 0.14,
+      bx - r * 0.06,
+      by + r * 0.08,
+    )
+    ctx.bezierCurveTo(bx - r * 0.07, by + r * 0.02, bx - r * 0.04, by - r * 0.06, bx, by - r * 0.08)
+    ctx.closePath()
+    ctx.fill()
+  }
+
+  // --- Bezier continent: Americas-like mass ---
+  const americasX = rotateFeatureX(-0.4, phase)
+  if (americasX !== null) {
+    const bx = cx + americasX * r
+    const by = cy - r * 0.1
+    ctx.fillStyle = 'rgba(34,139,34,0.28)'
+    ctx.beginPath()
+    // North America blob
+    ctx.moveTo(bx - r * 0.06, by - r * 0.15)
+    ctx.bezierCurveTo(
+      bx + r * 0.02,
+      by - r * 0.18,
+      bx + r * 0.08,
+      by - r * 0.1,
+      bx + r * 0.04,
+      by - r * 0.02,
+    )
+    // Central America bridge
+    ctx.bezierCurveTo(
+      bx + r * 0.02,
+      by + r * 0.02,
+      bx + r * 0.03,
+      by + r * 0.06,
+      bx + r * 0.05,
+      by + r * 0.1,
+    )
+    // South America blob
+    ctx.bezierCurveTo(
+      bx + r * 0.07,
+      by + r * 0.18,
+      bx - r * 0.02,
+      by + r * 0.22,
+      bx - r * 0.04,
+      by + r * 0.15,
+    )
+    ctx.bezierCurveTo(
+      bx - r * 0.06,
+      by + r * 0.08,
+      bx - r * 0.08,
+      by - r * 0.05,
+      bx - r * 0.06,
+      by - r * 0.15,
+    )
+    ctx.closePath()
+    ctx.fill()
+  }
+
+  // --- Bezier continent: Antarctica smudge ---
+  const antarcticaX = rotateFeatureX(0.0, phase)
+  if (antarcticaX !== null) {
+    ctx.fillStyle = 'rgba(220,220,220,0.2)'
+    ctx.beginPath()
+    ctx.ellipse(cx + antarcticaX * r, cy + r * 0.85, r * 0.3, r * 0.08, 0, 0, 2 * Math.PI)
+    ctx.fill()
+  }
+
+  // --- Multi-layer clouds ---
+  const cloudLayers = [
+    { xOff: 0.15, yOff: -0.15, w: 0.38, h: 0.06, angle: 0.15, alpha: 0.15, phaseShift: 0 },
+    { xOff: -0.25, yOff: 0.25, w: 0.3, h: 0.05, angle: -0.2, alpha: 0.12, phaseShift: 0.3 },
+    { xOff: 0.05, yOff: 0.5, w: 0.35, h: 0.05, angle: 0.1, alpha: 0.1, phaseShift: 0.6 },
+  ]
+  ctx.fillStyle = '#fff'
+  for (const cl of cloudLayers) {
+    const cloudX = rotateFeatureX(cl.xOff, phase + cl.phaseShift)
+    if (cloudX === null) continue
+    ctx.globalAlpha = cl.alpha
+    ctx.beginPath()
+    ctx.ellipse(cx + cloudX * r, cy + cl.yOff * r, cl.w * r, cl.h * r, cl.angle, 0, 2 * Math.PI)
+    ctx.fill()
+  }
+  ctx.globalAlpha = 1
+
+  ctx.restore()
+}
+
+/** Draw Mars surface features: terrain variation, Valles Marineris, Olympus Mons, ice caps. */
+function drawMarsFeatures(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  r: number,
+  phase: number,
+): void {
+  if (r < DETAIL_LEVEL_SURFACE) return
+
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(cx, cy, r, 0, 2 * Math.PI)
+  ctx.clip()
+
+  // --- Terrain color variation: dark and light patches ---
+  const darkPatches = [
+    { x: -0.2, y: 0.1, w: 0.2, h: 0.15 },
+    { x: 0.3, y: -0.2, w: 0.18, h: 0.12 },
+    { x: -0.1, y: -0.35, w: 0.15, h: 0.1 },
+  ]
+  for (const dp of darkPatches) {
+    const px = rotateFeatureX(dp.x, phase)
+    if (px === null) continue
+    ctx.fillStyle = 'rgba(100,40,15,0.2)'
+    ctx.beginPath()
+    ctx.ellipse(cx + px * r, cy + dp.y * r, dp.w * r, dp.h * r, 0.4, 0, 2 * Math.PI)
+    ctx.fill()
+  }
+  const lightPatches = [
+    { x: 0.1, y: 0.25, w: 0.15, h: 0.1 },
+    { x: -0.35, y: -0.1, w: 0.12, h: 0.08 },
+  ]
+  for (const lp of lightPatches) {
+    const px = rotateFeatureX(lp.x, phase)
+    if (px === null) continue
+    ctx.fillStyle = 'rgba(230,160,100,0.15)'
+    ctx.beginPath()
+    ctx.ellipse(cx + px * r, cy + lp.y * r, lp.w * r, lp.h * r, -0.3, 0, 2 * Math.PI)
+    ctx.fill()
+  }
+
+  // --- Valles Marineris: dark diagonal line across equator ---
+  const vmStartX = rotateFeatureX(-0.3, phase)
+  const vmEndX = rotateFeatureX(0.2, phase)
+  if (vmStartX !== null && vmEndX !== null) {
+    ctx.strokeStyle = 'rgba(80,25,10,0.35)'
+    ctx.lineWidth = Math.max(1, r * 0.02)
+    ctx.beginPath()
+    ctx.moveTo(cx + vmStartX * r, cy + r * 0.05)
+    ctx.bezierCurveTo(
+      cx + (vmStartX + (vmEndX - vmStartX) * 0.3) * r,
+      cy - r * 0.02,
+      cx + (vmStartX + (vmEndX - vmStartX) * 0.7) * r,
+      cy + r * 0.08,
+      cx + vmEndX * r,
+      cy + r * 0.02,
+    )
+    ctx.stroke()
+  }
+
+  // --- Olympus Mons: circular feature in northern hemisphere ---
+  if (r > DETAIL_LEVEL_FINE) {
+    const omX = rotateFeatureX(-0.15, phase)
+    if (omX !== null) {
+      const omCx = cx + omX * r
+      const omCy = cy - r * 0.35
+      const omR = r * 0.08
+      // Caldera (darker center)
+      ctx.fillStyle = 'rgba(90,35,15,0.25)'
+      ctx.beginPath()
+      ctx.arc(omCx, omCy, omR, 0, 2 * Math.PI)
+      ctx.fill()
+      // Bright rim
+      ctx.strokeStyle = 'rgba(220,160,100,0.3)'
+      ctx.lineWidth = Math.max(1, r * 0.015)
+      ctx.beginPath()
+      ctx.arc(omCx, omCy, omR, 0, 2 * Math.PI)
+      ctx.stroke()
+    }
+  }
+
+  // --- Polar ice caps ---
+  ctx.fillStyle = 'rgba(255,255,255,0.25)'
+  ctx.beginPath()
+  ctx.ellipse(cx, cy - r * 0.85, r * 0.35, r * 0.12, 0, 0, 2 * Math.PI)
+  ctx.fill()
+  ctx.fillStyle = 'rgba(255,255,255,0.2)'
+  ctx.beginPath()
+  ctx.ellipse(cx, cy + r * 0.88, r * 0.28, r * 0.09, 0, 0, 2 * Math.PI)
+  ctx.fill()
+
+  ctx.restore()
+}
+
+/** Draw Moon surface features: mare regions, craters with rim highlights. */
+function drawMoonFeatures(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  r: number,
+  phase: number,
+): void {
+  if (r < DETAIL_LEVEL_SURFACE) return
+
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(cx, cy, r, 0, 2 * Math.PI)
+  ctx.clip()
+
+  // --- Mare regions (dark flat basalt plains) ---
+  const mare = [
+    { x: -0.2, y: -0.25, w: 0.2, h: 0.18, name: 'Imbrium' },
+    { x: 0.1, y: -0.15, w: 0.13, h: 0.12, name: 'Serenitatis' },
+    { x: 0.2, y: 0.05, w: 0.15, h: 0.13, name: 'Tranquillitatis' },
+    { x: -0.35, y: 0.0, w: 0.18, h: 0.2, name: 'Procellarum' },
+  ]
+  for (const m of mare) {
+    const mx = rotateFeatureX(m.x, phase)
+    if (mx === null) continue
+    ctx.fillStyle = 'rgba(60,60,70,0.2)'
+    ctx.beginPath()
+    ctx.ellipse(cx + mx * r, cy + m.y * r, m.w * r, m.h * r, 0.2, 0, 2 * Math.PI)
+    ctx.fill()
+  }
+
+  // --- Craters with rim highlights ---
+  const craters = [
+    { x: 0.25, y: -0.3, size: 0.12 },
+    { x: -0.35, y: 0.15, size: 0.08 },
+    { x: 0.1, y: 0.35, size: 0.06 },
+    { x: -0.15, y: -0.2, size: 0.1 },
+    { x: 0.4, y: 0.1, size: 0.05 },
+    { x: -0.05, y: 0.5, size: 0.07 },
+    { x: 0.3, y: -0.05, size: 0.04 },
+    { x: -0.4, y: -0.35, size: 0.06 },
+    { x: 0.15, y: 0.15, size: 0.09 },
+    { x: -0.25, y: 0.4, size: 0.05 },
+  ]
+  for (const cr of craters) {
+    const crX = rotateFeatureX(cr.x, phase)
+    if (crX === null) continue
+    const crCx = cx + crX * r
+    const crCy = cy + cr.y * r
+    const crR = cr.size * r
+
+    // Crater floor (dark)
+    ctx.fillStyle = 'rgba(0,0,0,0.15)'
+    ctx.beginPath()
+    ctx.arc(crCx, crCy, crR, 0, 2 * Math.PI)
+    ctx.fill()
+
+    if (r > DETAIL_LEVEL_FINE) {
+      // Bright rim arc (upper-left, lit side)
+      ctx.strokeStyle = 'rgba(200,200,200,0.3)'
+      ctx.lineWidth = Math.max(1, crR * 0.15)
+      ctx.beginPath()
+      ctx.arc(crCx, crCy, crR, Math.PI * 0.9, Math.PI * 1.6)
+      ctx.stroke()
+
+      // Dark rim arc (lower-right, shadow side)
+      ctx.strokeStyle = 'rgba(0,0,0,0.2)'
+      ctx.lineWidth = Math.max(1, crR * 0.12)
+      ctx.beginPath()
+      ctx.arc(crCx, crCy, crR, Math.PI * -0.1, Math.PI * 0.6)
+      ctx.stroke()
+    }
+  }
+
+  ctx.restore()
+}
+
+/** Draw Jupiter surface features: wavy bands, varied colors, Great Red Spot. */
+function drawJupiterFeatures(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  r: number,
+  phase: number,
+): void {
+  if (r < DETAIL_LEVEL_BASIC * 2) return
+
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(cx, cy, r, 0, 2 * Math.PI)
+  ctx.clip()
+
+  // Band definitions: yPosition (normalized -1 to 1), height, color
+  const bands: Array<{ y: number; h: number; color: string }> = [
+    { y: -0.75, h: 0.14, color: 'rgba(180,120,60,0.2)' }, // dark brown
+    { y: -0.52, h: 0.12, color: 'rgba(230,210,170,0.15)' }, // cream
+    { y: -0.3, h: 0.15, color: 'rgba(170,100,50,0.22)' }, // rust
+    { y: -0.05, h: 0.13, color: 'rgba(220,200,160,0.12)' }, // tan
+    { y: 0.18, h: 0.16, color: 'rgba(160,90,40,0.2)' }, // ochre
+    { y: 0.42, h: 0.12, color: 'rgba(230,215,175,0.14)' }, // cream-light
+    { y: 0.62, h: 0.15, color: 'rgba(140,80,35,0.18)' }, // dark ochre
+  ]
+
+  // Draw wavy bands
+  const segCount = 24
+  for (const band of bands) {
+    const bandTop = cy + (band.y - band.h / 2) * r
+    const bandBot = cy + (band.y + band.h / 2) * r
+    const amplitude = r * 0.02
+    const freq = 3 + band.y * 2 // vary frequency per band
+
+    ctx.fillStyle = band.color
+    ctx.beginPath()
+
+    // Top edge (wavy)
+    for (let s = 0; s <= segCount; s++) {
+      const t = s / segCount
+      const sx = cx - r + t * 2 * r
+      const sy = bandTop + amplitude * Math.sin(freq * t * Math.PI * 2 + phase * 0.5 + band.y * 4)
+      if (s === 0) ctx.moveTo(sx, sy)
+      else ctx.lineTo(sx, sy)
+    }
+    // Bottom edge (wavy, reversed)
+    for (let s = segCount; s >= 0; s--) {
+      const t = s / segCount
+      const sx = cx - r + t * 2 * r
+      const sy =
+        bandBot + amplitude * Math.sin(freq * t * Math.PI * 2 + phase * 0.5 + band.y * 4 + 1.5)
+      ctx.lineTo(sx, sy)
+    }
+    ctx.closePath()
+    ctx.fill()
+  }
+
+  // --- Great Red Spot ---
+  if (r > DETAIL_LEVEL_SURFACE) {
+    const grsBaseX = 0.2
+    const grsX = rotateFeatureX(grsBaseX, phase)
+    if (grsX !== null) {
+      const grsCx = cx + grsX * r
+      const grsCy = cy + r * 0.25
+      const grsW = r * 0.12
+      const grsH = r * 0.08
+
+      // Spot gradient
+      const grsGrad = ctx.createRadialGradient(grsCx, grsCy, 0, grsCx, grsCy, grsW)
+      grsGrad.addColorStop(0, 'rgba(180,60,30,0.35)')
+      grsGrad.addColorStop(0.6, 'rgba(200,80,40,0.25)')
+      grsGrad.addColorStop(1, 'rgba(180,100,60,0)')
+      ctx.fillStyle = grsGrad
+      ctx.beginPath()
+      ctx.ellipse(grsCx, grsCy, grsW, grsH, 0.1, 0, 2 * Math.PI)
+      ctx.fill()
+
+      // Spot rim
+      ctx.strokeStyle = 'rgba(160,50,20,0.2)'
+      ctx.lineWidth = Math.max(1, r * 0.01)
+      ctx.beginPath()
+      ctx.ellipse(grsCx, grsCy, grsW, grsH, 0.1, 0, 2 * Math.PI)
+      ctx.stroke()
+    }
+  }
+
+  ctx.restore()
+}
+
+/**
+ * Draw Saturn ring system with C, B, A rings and Cassini division.
+ * @param half 'back' draws the far-side half (behind planet), 'front' draws near-side.
+ */
+function drawSaturnRings(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  r: number,
+  half: 'back' | 'front',
+): void {
+  if (r < DETAIL_LEVEL_BASIC) return
+
+  const tilt = -0.15 // ring tilt angle
+  const startAngle = half === 'back' ? 0 : Math.PI
+  const endAngle = half === 'back' ? Math.PI : 2 * Math.PI
+
+  // Ring definitions: inner/outer radius multipliers, color, opacity
+  const rings = [
+    // C ring (innermost, faint)
+    { inner: 1.25, outer: 1.5, color: '180,170,150', opacity: 0.12 },
+    // B ring (brightest)
+    { inner: 1.55, outer: 1.9, color: '220,200,160', opacity: 0.35 },
+    // Cassini division (gap)
+    { inner: 1.9, outer: 1.97, color: '10,10,20', opacity: 0.4 },
+    // A ring (outer, golden)
+    { inner: 1.97, outer: 2.3, color: '210,185,120', opacity: 0.28 },
+  ]
+
+  ctx.save()
+  for (const ring of rings) {
+    const outerRx = r * ring.outer
+    const outerRy = r * ring.outer * 0.23
+    const innerRx = r * ring.inner
+    const innerRy = r * ring.inner * 0.23
+    const ringWidth = outerRx - innerRx
+    const midRx = (outerRx + innerRx) / 2
+    const midRy = (outerRy + innerRy) / 2
+
+    ctx.strokeStyle = `rgba(${ring.color},${ring.opacity})`
+    ctx.lineWidth = Math.max(1, ringWidth)
+    ctx.beginPath()
+    ctx.ellipse(cx, cy, midRx, midRy, tilt, startAngle, endAngle)
+    ctx.stroke()
+  }
+  ctx.restore()
+}
+
+/** Draw Saturn band features: subtle horizontal bands similar to Jupiter but muted. */
+function drawSaturnBands(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  r: number,
+  phase: number,
+): void {
+  if (r < DETAIL_LEVEL_BASIC * 2) return
+
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(cx, cy, r, 0, 2 * Math.PI)
+  ctx.clip()
+
+  const bands = [
+    { y: -0.6, h: 0.15, color: 'rgba(190,160,90,0.12)' },
+    { y: -0.3, h: 0.12, color: 'rgba(210,185,120,0.1)' },
+    { y: 0.0, h: 0.14, color: 'rgba(180,150,80,0.12)' },
+    { y: 0.3, h: 0.12, color: 'rgba(200,175,110,0.1)' },
+    { y: 0.6, h: 0.13, color: 'rgba(170,140,75,0.12)' },
+  ]
+
+  const segCount = 20
+  for (const band of bands) {
+    const bandTop = cy + (band.y - band.h / 2) * r
+    const bandBot = cy + (band.y + band.h / 2) * r
+    const amplitude = r * 0.012
+    const freq = 2.5
+
+    ctx.fillStyle = band.color
+    ctx.beginPath()
+    for (let s = 0; s <= segCount; s++) {
+      const t = s / segCount
+      const sx = cx - r + t * 2 * r
+      const sy = bandTop + amplitude * Math.sin(freq * t * Math.PI * 2 + phase * 0.4)
+      if (s === 0) ctx.moveTo(sx, sy)
+      else ctx.lineTo(sx, sy)
+    }
+    for (let s = segCount; s >= 0; s--) {
+      const t = s / segCount
+      const sx = cx - r + t * 2 * r
+      const sy = bandBot + amplitude * Math.sin(freq * t * Math.PI * 2 + phase * 0.4 + 1.0)
+      ctx.lineTo(sx, sy)
+    }
+    ctx.closePath()
+    ctx.fill()
+  }
+
+  ctx.restore()
+}
+
+/** Draw Venus surface features: multiple swirling cloud layers, thick atmosphere. */
+function drawVenusFeatures(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  r: number,
+  phase: number,
+): void {
+  if (r < DETAIL_LEVEL_SURFACE) return
+
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(cx, cy, r, 0, 2 * Math.PI)
+  ctx.clip()
+
+  // --- Semi-opaque cloud deck to obscure surface ---
+  ctx.fillStyle = 'rgba(220,200,150,0.15)'
+  ctx.beginPath()
+  ctx.arc(cx, cy, r, 0, 2 * Math.PI)
+  ctx.fill()
+
+  // --- Multiple swirling cloud bands at different angles ---
+  const cloudBands = [
+    { yOff: -0.45, w: 0.7, h: 0.09, angle: 0.15, alpha: 0.18, speed: 1.0 },
+    { yOff: -0.15, w: 0.65, h: 0.08, angle: -0.1, alpha: 0.15, speed: 0.8 },
+    { yOff: 0.1, w: 0.72, h: 0.1, angle: 0.2, alpha: 0.2, speed: 1.2 },
+    { yOff: 0.35, w: 0.6, h: 0.07, angle: -0.15, alpha: 0.14, speed: 0.9 },
+    { yOff: 0.6, w: 0.55, h: 0.08, angle: 0.08, alpha: 0.16, speed: 1.1 },
+  ]
+
+  for (const cb of cloudBands) {
+    const xShift = Math.sin(phase * cb.speed + cb.yOff * 3) * 0.15
+    ctx.globalAlpha = cb.alpha
+    ctx.fillStyle = 'rgba(255,245,220,1)'
+    ctx.beginPath()
+    ctx.ellipse(
+      cx + xShift * r,
+      cy + cb.yOff * r,
+      cb.w * r,
+      cb.h * r,
+      cb.angle + Math.sin(phase * cb.speed * 0.3) * 0.05,
+      0,
+      2 * Math.PI,
+    )
+    ctx.fill()
+  }
+  ctx.globalAlpha = 1
+
+  // --- Yellowish atmospheric glow (inner glow) ---
+  const glowGrad = ctx.createRadialGradient(cx, cy, r * 0.6, cx, cy, r * 1.0)
+  glowGrad.addColorStop(0, 'rgba(0,0,0,0)')
+  glowGrad.addColorStop(0.5, 'rgba(245,220,130,0.08)')
+  glowGrad.addColorStop(1, 'rgba(245,220,130,0.12)')
+  ctx.fillStyle = glowGrad
+  ctx.beginPath()
+  ctx.arc(cx, cy, r, 0, 2 * Math.PI)
+  ctx.fill()
+
+  ctx.restore()
+}
+
+// ---------------------------------------------------------------------------
+// Main Planet Draw Function
 // ---------------------------------------------------------------------------
 
 function drawPlanet(
@@ -462,255 +1233,93 @@ function drawPlanet(
   const displayRadius = transform.planetScreenRadius
   const vis = PLANET_VISUALS[planetName] ?? PLANET_VISUALS['Earth']!
 
-  // Atmosphere glow
-  const atmoRadius = displayRadius * 1.15
-  const atmosphereGradient = ctx.createRadialGradient(
-    center.sx,
-    center.sy,
-    displayRadius * 0.8,
-    center.sx,
-    center.sy,
-    atmoRadius,
-  )
-  atmosphereGradient.addColorStop(0, 'rgba(0,0,0,0)')
-  atmosphereGradient.addColorStop(0.5, vis.atmoColor)
-  atmosphereGradient.addColorStop(1, 'rgba(0,0,0,0)')
-  ctx.fillStyle = atmosphereGradient
-  ctx.beginPath()
-  ctx.arc(center.sx, center.sy, atmoRadius, 0, 2 * Math.PI)
-  ctx.fill()
+  // Compute rotation phase from simTime
+  const rotationPhase = computeRotationPhase(state.simTime, vis.rotationRate)
 
-  // Saturn rings (behind planet body)
-  if (vis.hasRings && displayRadius > 4) {
-    ctx.save()
+  // --- Multi-layer atmosphere (outer layers first) ---
+  if (vis.atmosphereLayers.length > 0) {
+    drawAtmosphereLayers(ctx, center.sx, center.sy, displayRadius, vis.atmosphereLayers)
+  } else {
+    // Fallback: single atmosphere glow for planets without layers defined
+    const atmoRadius = displayRadius * 1.15
+    const atmosphereGradient = ctx.createRadialGradient(
+      center.sx,
+      center.sy,
+      displayRadius * 0.8,
+      center.sx,
+      center.sy,
+      atmoRadius,
+    )
+    atmosphereGradient.addColorStop(0, 'rgba(0,0,0,0)')
+    atmosphereGradient.addColorStop(0.5, vis.atmoColor)
+    atmosphereGradient.addColorStop(1, 'rgba(0,0,0,0)')
+    ctx.fillStyle = atmosphereGradient
     ctx.beginPath()
-    ctx.ellipse(center.sx, center.sy, displayRadius * 2.2, displayRadius * 0.5, -0.15, 0, Math.PI)
-    ctx.strokeStyle = 'rgba(210,190,140,0.35)'
-    ctx.lineWidth = Math.max(2, displayRadius * 0.15)
-    ctx.stroke()
-    // Inner ring
-    ctx.beginPath()
-    ctx.ellipse(center.sx, center.sy, displayRadius * 1.7, displayRadius * 0.4, -0.15, 0, Math.PI)
-    ctx.strokeStyle = 'rgba(190,170,120,0.25)'
-    ctx.lineWidth = Math.max(1, displayRadius * 0.08)
-    ctx.stroke()
-    ctx.restore()
+    ctx.arc(center.sx, center.sy, atmoRadius, 0, 2 * Math.PI)
+    ctx.fill()
   }
 
-  // Planet body
+  // --- Saturn rings (behind planet body) ---
+  if (vis.hasRings) {
+    drawSaturnRings(ctx, center.sx, center.sy, displayRadius, 'back')
+  }
+
+  // --- Planet body with directional lit-sphere gradient ---
   const bodyGradient = ctx.createRadialGradient(
-    center.sx - displayRadius * 0.3,
-    center.sy - displayRadius * 0.3,
+    center.sx - displayRadius * 0.35,
+    center.sy - displayRadius * 0.35,
     0,
-    center.sx,
-    center.sy,
+    center.sx + displayRadius * 0.05,
+    center.sy + displayRadius * 0.05,
     displayRadius,
   )
   bodyGradient.addColorStop(0, vis.bodyColors[0])
-  bodyGradient.addColorStop(0.5, vis.bodyColors[1])
+  bodyGradient.addColorStop(0.45, vis.bodyColors[1])
   bodyGradient.addColorStop(1, vis.bodyColors[2])
   ctx.fillStyle = bodyGradient
   ctx.beginPath()
   ctx.arc(center.sx, center.sy, displayRadius, 0, 2 * Math.PI)
   ctx.fill()
 
-  // Jupiter/Saturn horizontal bands
-  if (vis.hasBands && displayRadius > 8) {
-    ctx.save()
-    ctx.beginPath()
-    ctx.arc(center.sx, center.sy, displayRadius, 0, 2 * Math.PI)
-    ctx.clip()
-    const bandCount = 6
-    for (let i = 0; i < bandCount; i++) {
-      const yOff = ((i / bandCount) * 2 - 1) * displayRadius * 0.9
-      const bandH = displayRadius * 0.12
-      ctx.fillStyle = i % 2 === 0 ? `rgba(0,0,0,0.12)` : `rgba(255,255,255,0.06)`
-      ctx.fillRect(
-        center.sx - displayRadius,
-        center.sy + yOff - bandH / 2,
-        displayRadius * 2,
-        bandH,
-      )
-    }
-    ctx.restore()
+  // --- Planet-specific surface features ---
+  if (planetName === 'Jupiter') {
+    drawJupiterFeatures(ctx, center.sx, center.sy, displayRadius, rotationPhase)
+  } else if (planetName === 'Saturn') {
+    drawSaturnBands(ctx, center.sx, center.sy, displayRadius, rotationPhase)
   }
 
-  // Moon craters
-  if (vis.hasCraters && displayRadius > 10) {
-    ctx.save()
-    ctx.beginPath()
-    ctx.arc(center.sx, center.sy, displayRadius, 0, 2 * Math.PI)
-    ctx.clip()
-    const craters = [
-      [0.25, -0.3, 0.12],
-      [-0.35, 0.15, 0.08],
-      [0.1, 0.35, 0.06],
-      [-0.15, -0.2, 0.1],
-      [0.4, 0.1, 0.05],
-    ]
-    for (const [cx, cy, cr] of craters) {
-      ctx.beginPath()
-      ctx.arc(
-        center.sx + cx! * displayRadius,
-        center.sy + cy! * displayRadius,
-        cr! * displayRadius,
-        0,
-        2 * Math.PI,
-      )
-      ctx.fillStyle = 'rgba(0,0,0,0.15)'
-      ctx.fill()
-      ctx.strokeStyle = 'rgba(0,0,0,0.08)'
-      ctx.lineWidth = 1
-      ctx.stroke()
-    }
-    ctx.restore()
+  if (planetName === 'Moon') {
+    drawMoonFeatures(ctx, center.sx, center.sy, displayRadius, rotationPhase)
   }
 
-  // Earth continents (green landmasses)
-  if (planetName === 'Earth' && displayRadius > 10) {
-    ctx.save()
-    ctx.beginPath()
-    ctx.arc(center.sx, center.sy, displayRadius, 0, 2 * Math.PI)
-    ctx.clip()
-    const landmasses = [
-      [-0.1, -0.25, 0.22, 0.18],
-      [0.2, -0.05, 0.15, 0.12],
-      [-0.3, 0.15, 0.18, 0.1],
-      [0.35, 0.25, 0.1, 0.1],
-    ]
-    for (const [lx, ly, lw, lh] of landmasses) {
-      ctx.beginPath()
-      ctx.ellipse(
-        center.sx + lx! * displayRadius,
-        center.sy + ly! * displayRadius,
-        lw! * displayRadius,
-        lh! * displayRadius,
-        0.3,
-        0,
-        2 * Math.PI,
-      )
-      ctx.fillStyle = 'rgba(34,139,34,0.25)'
-      ctx.fill()
-    }
-    // Cloud wisps
-    ctx.globalAlpha = 0.15
-    ctx.fillStyle = '#fff'
-    ctx.beginPath()
-    ctx.ellipse(
-      center.sx + displayRadius * 0.15,
-      center.sy - displayRadius * 0.1,
-      displayRadius * 0.35,
-      displayRadius * 0.06,
-      0.2,
-      0,
-      2 * Math.PI,
-    )
-    ctx.fill()
-    ctx.beginPath()
-    ctx.ellipse(
-      center.sx - displayRadius * 0.2,
-      center.sy + displayRadius * 0.3,
-      displayRadius * 0.25,
-      displayRadius * 0.05,
-      -0.3,
-      0,
-      2 * Math.PI,
-    )
-    ctx.fill()
-    ctx.globalAlpha = 1
-    ctx.restore()
+  if (planetName === 'Earth') {
+    drawEarthFeatures(ctx, center.sx, center.sy, displayRadius, rotationPhase)
   }
 
-  // Venus thick atmosphere swirl
-  if (planetName === 'Venus' && displayRadius > 10) {
-    ctx.save()
-    ctx.beginPath()
-    ctx.arc(center.sx, center.sy, displayRadius, 0, 2 * Math.PI)
-    ctx.clip()
-    ctx.globalAlpha = 0.15
-    ctx.fillStyle = '#fff'
-    for (let i = 0; i < 4; i++) {
-      ctx.beginPath()
-      ctx.ellipse(
-        center.sx + Math.sin(i * 1.5) * displayRadius * 0.3,
-        center.sy + (i / 4 - 0.5) * displayRadius * 1.2,
-        displayRadius * 0.6,
-        displayRadius * 0.08,
-        i * 0.2,
-        0,
-        2 * Math.PI,
-      )
-      ctx.fill()
-    }
-    ctx.globalAlpha = 1
-    ctx.restore()
+  if (planetName === 'Venus') {
+    drawVenusFeatures(ctx, center.sx, center.sy, displayRadius, rotationPhase)
   }
 
-  // Mars polar ice caps
-  if (planetName === 'Mars' && displayRadius > 10) {
-    ctx.save()
-    ctx.beginPath()
-    ctx.arc(center.sx, center.sy, displayRadius, 0, 2 * Math.PI)
-    ctx.clip()
-    ctx.fillStyle = 'rgba(255,255,255,0.3)'
-    ctx.beginPath()
-    ctx.ellipse(
-      center.sx,
-      center.sy - displayRadius * 0.85,
-      displayRadius * 0.35,
-      displayRadius * 0.12,
-      0,
-      0,
-      2 * Math.PI,
-    )
-    ctx.fill()
-    ctx.beginPath()
-    ctx.ellipse(
-      center.sx,
-      center.sy + displayRadius * 0.88,
-      displayRadius * 0.28,
-      displayRadius * 0.09,
-      0,
-      0,
-      2 * Math.PI,
-    )
-    ctx.fill()
-    ctx.restore()
+  if (planetName === 'Mars') {
+    drawMarsFeatures(ctx, center.sx, center.sy, displayRadius, rotationPhase)
   }
 
-  // Saturn rings (in front of planet body — top half)
-  if (vis.hasRings && displayRadius > 4) {
-    ctx.save()
-    ctx.beginPath()
-    ctx.ellipse(
-      center.sx,
-      center.sy,
-      displayRadius * 2.2,
-      displayRadius * 0.5,
-      -0.15,
-      Math.PI,
-      2 * Math.PI,
-    )
-    ctx.strokeStyle = 'rgba(210,190,140,0.35)'
-    ctx.lineWidth = Math.max(2, displayRadius * 0.15)
-    ctx.stroke()
-    ctx.beginPath()
-    ctx.ellipse(
-      center.sx,
-      center.sy,
-      displayRadius * 1.7,
-      displayRadius * 0.4,
-      -0.15,
-      Math.PI,
-      2 * Math.PI,
-    )
-    ctx.strokeStyle = 'rgba(190,170,120,0.25)'
-    ctx.lineWidth = Math.max(1, displayRadius * 0.08)
-    ctx.stroke()
-    ctx.restore()
+  // --- Lit-sphere shading overlays ---
+  drawHighlightOverlay(
+    ctx,
+    center.sx,
+    center.sy,
+    displayRadius,
+    vis.lightResponse.highlightIntensity,
+  )
+  drawShadowOverlay(ctx, center.sx, center.sy, displayRadius, vis.lightResponse.shadowIntensity)
+
+  // --- Saturn rings (in front of planet body — near-side half) ---
+  if (vis.hasRings) {
+    drawSaturnRings(ctx, center.sx, center.sy, displayRadius, 'front')
   }
 
-  // Atmosphere edge glow
+  // --- Atmosphere edge glow ---
   const atmoEdge = displayRadius * 1.05
   const edgeGradient = ctx.createRadialGradient(
     center.sx,
@@ -727,7 +1336,7 @@ function drawPlanet(
   ctx.arc(center.sx, center.sy, atmoEdge, 0, 2 * Math.PI)
   ctx.fill()
 
-  // Planet name label
+  // --- Planet name label ---
   if (displayRadius > 20) {
     ctx.font = 'bold 12px monospace'
     ctx.textAlign = 'center'
@@ -1068,18 +1677,17 @@ function drawHud(
   const isBound = state.specificEnergy < 0 && !state.escaped
 
   // --- Build metric cells ---
-  interface Cell {
-    label: string
-    value: string
-    color: string
-    width: number
-  }
-
-  const cells: Cell[] = [
+  const cells: HudCell[] = [
     { label: 'BODY', value: planetName, color: '#88bbdd', width: 70 },
-    { label: 'ALT', value: `${(altitude / 1000).toFixed(1)} km`, color: '#e2e8f0', width: 90 },
-    { label: 'VEL', value: `${speed.toFixed(0)} m/s`, color: '#e2e8f0', width: 90 },
-    { label: 'ORBITS', value: `${state.orbitsCompleted}`, color: '#e2e8f0', width: 55 },
+    {
+      label: 'ALT',
+      value: `${(altitude / 1000).toFixed(1)} km`,
+      color: '#e2e8f0',
+      width: 90,
+      core: true,
+    },
+    { label: 'VEL', value: `${speed.toFixed(0)} m/s`, color: '#e2e8f0', width: 90, core: true },
+    { label: 'ORBITS', value: `${state.orbitsCompleted}`, color: '#e2e8f0', width: 55, core: true },
   ]
 
   if (state.orbitalPeriod > 0 && !state.escaped) {
@@ -1120,76 +1728,21 @@ function drawHud(
         : `${(state.simTime / 60).toFixed(1)}m`,
     color: 'rgba(255,255,255,0.5)',
     width: 55,
+    core: true,
   })
 
-  // --- Layout: horizontal bar across the top ---
-  const barHeight = 44
-  const barPad = 8
-  const cellGap = 2
-  const totalCellWidth = cells.reduce((sum, c) => sum + c.width + cellGap, 0)
-  const barLeft = Math.max(0, (width - totalCellWidth) / 2)
-
-  // Background bar
-  ctx.fillStyle = 'rgba(5, 8, 18, 0.75)'
-  ctx.fillRect(0, 0, width, barHeight)
-  // Bottom edge highlight
-  ctx.fillStyle = 'rgba(100, 180, 255, 0.08)'
-  ctx.fillRect(0, barHeight - 1, width, 1)
-
-  // Draw each cell
-  let cx = barLeft
-  for (const cell of cells) {
-    // Cell background
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.03)'
-    ctx.fillRect(cx, 3, cell.width, barHeight - 6)
-    // Left accent line
-    ctx.fillStyle = cell.color
-    ctx.globalAlpha = 0.3
-    ctx.fillRect(cx, 6, 2, barHeight - 12)
-    ctx.globalAlpha = 1
-
-    // Label
-    ctx.font = '9px monospace'
-    ctx.textAlign = 'left'
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)'
-    ctx.fillText(cell.label, cx + barPad, 16)
-
-    // Value
-    ctx.font = 'bold 13px monospace'
-    ctx.fillStyle = cell.color
-    ctx.fillText(cell.value, cx + barPad, 34)
-
-    cx += cell.width + cellGap
+  // --- Status ---
+  let statusText: string | undefined
+  let statusColor: string | undefined
+  if (state.crashed) {
+    statusText = 'CRASHED'
+    statusColor = '#ef4444'
+  } else if (state.escaped) {
+    statusText = 'ESCAPED'
+    statusColor = '#22c55e'
   }
 
-  // --- Status badge (CRASHED / ESCAPED) ---
-  if (state.crashed || state.escaped) {
-    const statusText = state.crashed ? 'CRASHED' : 'ESCAPED'
-    const statusColor = state.crashed ? '#ef4444' : '#22c55e'
-    const statusBg = state.crashed ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)'
-
-    ctx.font = 'bold 14px monospace'
-    const tw = ctx.measureText(statusText).width
-    const badgeW = tw + 24
-    const badgeX = (width - badgeW) / 2
-    const badgeY = barHeight + 12
-
-    // Badge background
-    ctx.fillStyle = statusBg
-    ctx.beginPath()
-    ctx.roundRect(badgeX, badgeY, badgeW, 28, 6)
-    ctx.fill()
-    // Badge border
-    ctx.strokeStyle = statusColor
-    ctx.lineWidth = 1.5
-    ctx.beginPath()
-    ctx.roundRect(badgeX, badgeY, badgeW, 28, 6)
-    ctx.stroke()
-    // Badge text
-    ctx.fillStyle = statusColor
-    ctx.textAlign = 'center'
-    ctx.fillText(statusText, width / 2, badgeY + 20)
-  }
+  drawResponsiveHud(ctx, { cells, statusText, statusColor }, width)
 }
 
 function drawZoomControls(ctx: CanvasRenderingContext2D, height: number): void {
