@@ -4,6 +4,7 @@
 
 import type { MarketState } from './types.ts'
 import type { ParamValues } from '@/engine/types.ts'
+import { drawResponsiveHud, type HudCell } from '@/engine/hud-utils.ts'
 
 const ACCENT_COLOR = '#2a9d8f'
 const CONSUMER_SURPLUS_COLOR = 'rgba(76, 175, 80, 0.3)' // Green
@@ -292,40 +293,40 @@ function renderHUD(
   ctx: CanvasRenderingContext2D,
   state: MarketState,
   width: number,
-  height: number,
+  _height: number,
 ): void {
-  const hudX = 20
-  const hudY = height - 120
+  const cells: HudCell[] = [
+    { label: 'DAY', value: `${state.day}`, color: '#e2e8f0', width: 55, core: true },
+    {
+      label: 'PRICE',
+      value: `$${state.price.toFixed(2)}`,
+      color: '#2a9d8f',
+      width: 90,
+      core: true,
+    },
+    { label: 'QTY', value: `${state.quantityTraded}`, color: '#e2e8f0', width: 55, core: true },
+    { label: 'C.SURP', value: `$${state.consumerSurplus.toFixed(0)}`, color: '#4caf50', width: 80 },
+    { label: 'P.SURP', value: `$${state.producerSurplus.toFixed(0)}`, color: '#2196f3', width: 80 },
+  ]
 
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
-  ctx.fillRect(hudX - 10, hudY - 10, 250, 110)
-
-  ctx.fillStyle = '#ffffff'
-  ctx.font = 'bold 14px sans-serif'
-  ctx.textAlign = 'left'
-  ctx.fillText(`Day: ${state.day}`, hudX, hudY)
-  ctx.fillText(`Price: $${state.price.toFixed(2)}`, hudX, hudY + 20)
-  ctx.fillText(`Quantity Traded: ${state.quantityTraded}`, hudX, hudY + 40)
-  ctx.fillText(`Consumer Surplus: $${state.consumerSurplus.toFixed(0)}`, hudX, hudY + 60)
-  ctx.fillText(`Producer Surplus: $${state.producerSurplus.toFixed(0)}`, hudX, hudY + 80)
-
-  // Show surplus/shortage indicator
   if (state.surplus !== 0) {
-    const hudX2 = width - 220
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
-    ctx.fillRect(hudX2 - 10, hudY - 10, 210, 50)
-
-    ctx.fillStyle = state.surplus > 0 ? '#ff9800' : '#2196f3'
-    ctx.font = 'bold 14px sans-serif'
-    ctx.textAlign = 'left'
-    if (state.surplus > 0) {
-      ctx.fillText(`Excess Supply: ${state.surplus}`, hudX2, hudY)
-    } else {
-      ctx.fillText(`Excess Demand: ${-state.surplus}`, hudX2, hudY)
-    }
-    if (state.deadweightLoss > 0) {
-      ctx.fillStyle = '#f44336'
-      ctx.fillText(`Deadweight Loss: $${state.deadweightLoss.toFixed(0)}`, hudX2, hudY + 20)
-    }
+    cells.push({
+      label: state.surplus > 0 ? 'EXSUP' : 'EXDEM',
+      value: `${Math.abs(state.surplus)}`,
+      color: state.surplus > 0 ? '#ff9800' : '#2196f3',
+      width: 65,
+      core: true,
+    })
   }
+
+  if (state.deadweightLoss > 0) {
+    cells.push({
+      label: 'DWL',
+      value: `$${state.deadweightLoss.toFixed(0)}`,
+      color: '#f44336',
+      width: 70,
+    })
+  }
+
+  drawResponsiveHud(ctx, { cells }, width)
 }

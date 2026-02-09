@@ -120,3 +120,22 @@
 .slider-input:disabled::-moz-range-thumb {
   cursor: not-allowed;
 }
+
+/* Mobile: larger thumb and track for touch targets */
+
+@media (max-width: 767px) {
+  .slider-input {
+    height: 8px;
+    padding-block: 18px;
+  }
+
+  .slider-input::-webkit-slider-thumb {
+    width: 28px;
+    height: 28px;
+  }
+
+  .slider-input::-moz-range-thumb {
+    width: 28px;
+    height: 28px;
+  }
+}

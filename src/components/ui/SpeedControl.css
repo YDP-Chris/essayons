@@ -1,0 +1,51 @@
+/* SpeedControl — segmented button group for speed presets */
+
+.speed-control {
+  display: flex;
+  gap: 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.speed-control__btn {
+  appearance: none;
+  border: none;
+  background: var(--color-surface, #1a1a2e);
+  color: var(--color-text, #e2e8f0);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+  font-weight: 500;
+  min-height: 44px;
+  min-width: 44px;
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+  border-inline-end: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.speed-control__btn:last-child {
+  border-inline-end: none;
+}
+
+.speed-control__btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.speed-control__btn--active {
+  background-color: var(--domain-accent, var(--spark));
+  color: var(--ink, #1a1a2e);
+  font-weight: 600;
+}
+
+.speed-control__btn--active:hover {
+  background-color: var(--domain-accent, var(--spark));
+}
+
+.speed-control__btn:focus-visible {
+  outline: 2px solid var(--domain-accent, var(--spark));
+  outline-offset: -2px;
+  z-index: 1;
+}

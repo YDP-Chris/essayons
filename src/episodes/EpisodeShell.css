@@ -29,6 +29,19 @@
   align-items: flex-start;
   gap: var(--space-4);
   flex-wrap: wrap;
+  transition:
+    transform 300ms ease,
+    opacity 300ms ease;
+}
+
+.episode-shell__header--hidden {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  inset-inline-start: 0;
+  inset-inline-end: 0;
 }
 
 .episode-shell__header-text {
@@ -147,6 +160,35 @@
   min-height: 300px;
 }
 
+/* Zoom level badge */
+
+.episode-shell__zoom-badge {
+  position: absolute;
+  top: 52px;
+  inset-inline-end: var(--space-3);
+  background-color: rgba(0, 0, 0, 0.7);
+  color: #e2e8f0;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  pointer-events: none;
+  animation: zoom-badge-fade 1s ease-out forwards;
+}
+
+@keyframes zoom-badge-fade {
+  0% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 /* Sidebar */
 
 .episode-shell__sidebar {
@@ -163,50 +205,90 @@
   gap: var(--space-4);
 }
 
-/* Responsive: stack everything on small screens */
+/* FAB — landscape mode floating action button */
 
-@media (max-width: 767px) {
-  .episode-shell {
-    padding: var(--space-3);
-    gap: var(--space-3);
-  }
-
-  .episode-shell__header {
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-
-  .episode-shell__title {
-    font-size: 1.25rem;
-  }
-
-  .episode-shell__subtitle {
-    display: none;
-  }
-
-  .episode-shell__controls {
-    flex-wrap: wrap;
-  }
-
-  /* Hide sidebar and reference on small screens - they'll be in Drawer/BottomSheet */
-  .episode-shell__sidebar,
-  .episode-shell__reference {
-    display: none;
-  }
-
-  .episode-shell__canvas {
-    min-height: 250px;
-  }
-
-  .episode-shell__canvas-wrapper {
-    min-height: 250px;
-  }
+.episode-shell__fab-container {
+  position: fixed;
+  bottom: var(--space-4);
+  inset-inline-end: var(--space-4);
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
 }
 
-/* Landscape mode on mobile */
-@media (max-width: 767px) and (orientation: landscape) {
-  .episode-shell {
-    padding: var(--space-2);
+.episode-shell__fab {
+  appearance: none;
+  border: none;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  background-color: var(--domain-accent, var(--spark));
+  color: var(--ink, #1a1a2e);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-lg);
+  transition:
+    background-color var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.episode-shell__fab:hover {
+  transform: scale(1.05);
+}
+
+.episode-shell__fab:focus-visible {
+  outline: 2px solid var(--domain-accent, var(--spark));
+  outline-offset: 2px;
+}
+
+.episode-shell__fab-menu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  background-color: var(--ink, #1a1a2e);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  box-shadow: var(--shadow-lg);
+}
+
+.episode-shell__fab-item {
+  appearance: none;
+  border: none;
+  background: none;
+  color: var(--paper, #f7f6f3);
+  font-family: var(--font-body, sans-serif);
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: var(--space-2) var(--space-4);
+  min-height: 44px;
+  min-width: 44px;
+  text-align: start;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  transition: background-color var(--transition-fast);
+}
+
+.episode-shell__fab-item:hover {
+  background-color: var(--graphite, #2d2d44);
+}
+
+.episode-shell__fab-item:focus-visible {
+  outline: 2px solid var(--domain-accent, var(--spark));
+  outline-offset: -2px;
+}
+
+/* =========================================================================
+   Responsive: mobile portrait (< 768px)
+   ========================================================================= */
+
+@media (max-width: 767px) {
+  .episode-shell--mobile {
+    padding: var(--space-2) var(--space-2) calc(56px + env(safe-area-inset-bottom) + var(--space-2));
     gap: var(--space-2);
   }
 
@@ -216,13 +298,122 @@
     gap: var(--space-2);
   }
 
+  .episode-shell__header-text {
+    min-width: 0;
+    flex: 0 1 auto;
+  }
+
+  .episode-shell__title {
+    font-size: 1.125rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .episode-shell__subtitle {
+    display: none;
+  }
+
+  .episode-shell__controls {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  /* Hide sidebar and reference on small screens - they're in Drawer/BottomSheet */
+  .episode-shell__sidebar,
+  .episode-shell__reference {
+    display: none;
+  }
+
+  /* Canvas takes most of viewport */
   .episode-shell__canvas-wrapper {
-    min-height: 50vh;
-    min-height: 50dvh;
+    min-height: calc(100dvh - 120px);
+    min-height: max(250px, calc(100dvh - 120px));
   }
 
   .episode-shell__canvas {
-    min-height: 50vh;
-    min-height: 50dvh;
+    min-height: calc(100dvh - 120px);
+    min-height: max(250px, calc(100dvh - 120px));
+  }
+}
+
+/* =========================================================================
+   Responsive: landscape phone
+   ========================================================================= */
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .episode-shell--landscape {
+    padding: var(--space-1);
+    gap: var(--space-1);
+  }
+
+  .episode-shell--landscape .episode-shell__header {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 0 var(--space-2);
+  }
+
+  .episode-shell--landscape .episode-shell__title {
+    font-size: 1rem;
+  }
+
+  .episode-shell--landscape .episode-shell__subtitle {
+    display: none;
+  }
+
+  .episode-shell--landscape .episode-shell__canvas-wrapper {
+    min-height: calc(100dvh - 48px);
+    border-radius: 0;
+  }
+
+  .episode-shell--landscape .episode-shell__canvas {
+    min-height: calc(100dvh - 48px);
+  }
+
+  .episode-shell--landscape .episode-shell__sidebar,
+  .episode-shell--landscape .episode-shell__reference {
+    display: none;
+  }
+}
+
+/* =========================================================================
+   Touch ripple on buttons (mobile)
+   ========================================================================= */
+
+@media (max-width: 767px) {
+  .btn:active:not(:disabled) {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn:active:not(:disabled)::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.25), transparent 70%);
+    pointer-events: none;
+    animation: touch-ripple 300ms ease-out;
+  }
+}
+
+@keyframes touch-ripple {
+  from {
+    transform: scale(0);
+    opacity: 1;
+  }
+  to {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .episode-shell__header {
+    transition: none;
+  }
+
+  .episode-shell__zoom-badge {
+    animation: none;
   }
 }

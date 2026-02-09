@@ -10,7 +10,7 @@
  * Fires analytics events on parameter changes.
  */
 
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import type { ParameterConfig } from './types.ts'
 import { Slider } from '@/components/ui/Slider.tsx'
 import { Card } from '@/components/ui/Card.tsx'
@@ -196,6 +196,99 @@ function Vector2Control({ param, value, episodeId, onChange }: Vector2ControlPro
 }
 
 // ---------------------------------------------------------------------------
+// Control renderer helper
+// ---------------------------------------------------------------------------
+
+function renderControl(
+  param: ParameterConfig,
+  value: unknown,
+  episodeId: string,
+  onChange: (id: string, value: unknown) => void,
+) {
+  switch (param.type) {
+    case 'number':
+      return (
+        <NumberControl
+          key={param.id}
+          param={param}
+          value={value as number}
+          episodeId={episodeId}
+          onChange={onChange}
+        />
+      )
+    case 'boolean':
+      return (
+        <BooleanControl
+          key={param.id}
+          param={param}
+          value={value as boolean}
+          episodeId={episodeId}
+          onChange={onChange}
+        />
+      )
+    case 'enum':
+      return (
+        <EnumControl
+          key={param.id}
+          param={param}
+          value={value as string}
+          episodeId={episodeId}
+          onChange={onChange}
+        />
+      )
+    case 'vector2':
+      return (
+        <Vector2Control
+          key={param.id}
+          param={param}
+          value={value as { x: number; y: number }}
+          episodeId={episodeId}
+          onChange={onChange}
+        />
+      )
+    default:
+      return null
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Grouping helper
+// ---------------------------------------------------------------------------
+
+interface ParameterGroup {
+  readonly name: string | null
+  readonly params: readonly ParameterConfig[]
+}
+
+function groupParameters(parameters: readonly ParameterConfig[]): ParameterGroup[] {
+  const groups: ParameterGroup[] = []
+  const groupMap = new Map<string, ParameterConfig[]>()
+  const ungrouped: ParameterConfig[] = []
+
+  for (const param of parameters) {
+    if (param.group) {
+      const existing = groupMap.get(param.group)
+      if (existing) {
+        existing.push(param)
+      } else {
+        const arr = [param]
+        groupMap.set(param.group, arr)
+        groups.push({ name: param.group, params: arr })
+      }
+    } else {
+      ungrouped.push(param)
+    }
+  }
+
+  // Ungrouped parameters come first, then named groups
+  const result: ParameterGroup[] = []
+  if (ungrouped.length > 0) {
+    result.push({ name: null, params: ungrouped })
+  }
+  return result.concat(groups)
+}
+
+// ---------------------------------------------------------------------------
 // Main Component
 // ---------------------------------------------------------------------------
 
@@ -207,9 +300,13 @@ export function ParameterPanel({
 }: ParameterPanelProps) {
   const { t } = useTranslation()
 
+  const groups = useMemo(() => groupParameters(parameters), [parameters])
+
   if (parameters.length === 0) {
     return null
   }
+
+  const hasGroups = groups.some((g) => g.name !== null)
 
   return (
     <Card
@@ -217,53 +314,28 @@ export function ParameterPanel({
       className="parameter-panel"
     >
       <div className="parameter-panel__controls">
-        {parameters.map((param) => {
-          const value = values[param.id] ?? param.default
+        {groups.map((group) => {
+          const controls = group.params.map((param) => {
+            const value = values[param.id] ?? param.default
+            return renderControl(param, value, episodeId, onParameterChange)
+          })
 
-          switch (param.type) {
-            case 'number':
-              return (
-                <NumberControl
-                  key={param.id}
-                  param={param}
-                  value={value as number}
-                  episodeId={episodeId}
-                  onChange={onParameterChange}
-                />
-              )
-            case 'boolean':
-              return (
-                <BooleanControl
-                  key={param.id}
-                  param={param}
-                  value={value as boolean}
-                  episodeId={episodeId}
-                  onChange={onParameterChange}
-                />
-              )
-            case 'enum':
-              return (
-                <EnumControl
-                  key={param.id}
-                  param={param}
-                  value={value as string}
-                  episodeId={episodeId}
-                  onChange={onParameterChange}
-                />
-              )
-            case 'vector2':
-              return (
-                <Vector2Control
-                  key={param.id}
-                  param={param}
-                  value={value as { x: number; y: number }}
-                  episodeId={episodeId}
-                  onChange={onParameterChange}
-                />
-              )
-            default:
-              return null
+          // Ungrouped parameters render directly
+          if (group.name === null) {
+            return controls
           }
+
+          // Named groups render in collapsible <details> sections
+          return (
+            <details
+              key={group.name}
+              className="parameter-panel__group"
+              open={!hasGroups || groups.filter((g) => g.name !== null).length <= 2}
+            >
+              <summary>{group.name}</summary>
+              <div className="parameter-panel__group-content">{controls}</div>
+            </details>
+          )
         })}
       </div>
     </Card>

@@ -105,6 +105,23 @@
 
 /* Responsive sizing handled by clamp() on --orbit-size */
 
+/* Very small screens: shrink orbit and hide labels */
+@media (max-width: 374px) {
+  .domain-orbit {
+    --orbit-size: 200px;
+  }
+
+  .domain-orbit__logo {
+    font-size: 2.5rem;
+  }
+
+  .domain-orbit__node {
+    width: 28px;
+    height: 28px;
+    margin: -14px 0 0 -14px;
+  }
+}
+
 /* Respect reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   .domain-orbit__ring {

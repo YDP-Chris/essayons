@@ -86,6 +86,8 @@ export interface ParameterConfig {
   readonly unit?: string
   readonly options?: readonly string[]
   readonly description?: string
+  /** Optional group name for collapsible parameter grouping on mobile. */
+  readonly group?: string
 }
 
 // ---------------------------------------------------------------------------

@@ -7,6 +7,7 @@
 
 import type { BridgeState } from './types.ts'
 import { MATERIALS } from './physics.ts'
+import { drawResponsiveHud, type HudCell } from '@/engine/hud-utils.ts'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -332,34 +333,57 @@ function drawHud(
   width: number,
   _height: number,
 ): void {
-  ctx.font = '12px monospace'
-  ctx.textAlign = 'right'
-
-  const lines = [
-    `Weight: ${state.totalWeight.toFixed(0)} kg`,
-    `Max Stress: ${(state.maxStress / 1e6).toFixed(1)} MPa`,
-    `Safety Factor: ${state.safetyFactor === Infinity ? '∞' : state.safetyFactor.toFixed(2)}`,
-    `Deflection: ${(state.maxDeflection * 100).toFixed(1)} cm`,
-    `Broken Beams: ${state.brokenBeams}`,
-    `Time: ${state.simTime.toFixed(1)} s`,
+  const cells: HudCell[] = [
+    {
+      label: 'WEIGHT',
+      value: `${state.totalWeight.toFixed(0)} kg`,
+      color: '#e2e8f0',
+      width: 90,
+      core: true,
+    },
+    {
+      label: 'STRESS',
+      value: `${(state.maxStress / 1e6).toFixed(1)} MPa`,
+      color: '#e2e8f0',
+      width: 95,
+      core: true,
+    },
+    {
+      label: 'SAFETY',
+      value: state.safetyFactor === Infinity ? '\u221E' : state.safetyFactor.toFixed(2),
+      color: '#22c55e',
+      width: 75,
+      core: true,
+    },
+    {
+      label: 'DEFL',
+      value: `${(state.maxDeflection * 100).toFixed(1)} cm`,
+      color: '#e2e8f0',
+      width: 80,
+    },
+    {
+      label: 'BROKEN',
+      value: `${state.brokenBeams}`,
+      color: state.brokenBeams > 0 ? COLORS.danger : '#e2e8f0',
+      width: 65,
+    },
+    {
+      label: 'TIME',
+      value: `${state.simTime.toFixed(1)} s`,
+      color: 'rgba(255,255,255,0.5)',
+      width: 65,
+      core: true,
+    },
   ]
 
-  const x = width - 16
-  let y = 24
+  const hudBarHeight = drawResponsiveHud(ctx, { cells }, width)
 
-  for (const line of lines) {
-    const isBroken = line.includes('Broken') && state.brokenBeams > 0
-
-    ctx.fillStyle = isBroken ? COLORS.danger : COLORS.textDim
-    ctx.fillText(line, x, y)
-    y += 18
-  }
-
-  // Draw stress color legend
+  // Draw stress color legend below the HUD bar
   ctx.textAlign = 'left'
   const legendX = 16
-  let legendY = 24
+  let legendY = hudBarHeight + 16
 
+  ctx.font = '12px monospace'
   ctx.fillStyle = COLORS.text
   ctx.fillText('Stress Legend:', legendX, legendY)
   legendY += 20

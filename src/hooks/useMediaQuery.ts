@@ -22,3 +22,6 @@ export function useIsTablet() {
 export function useIsDesktop() {
   return useMediaQuery('(min-width: 768px)')
 }
+export function useIsLandscape() {
+  return useMediaQuery('(orientation: landscape) and (max-height: 500px)')
+}

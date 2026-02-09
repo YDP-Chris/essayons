@@ -121,9 +121,8 @@
 /* Touch-friendly controls on mobile/tablet */
 
 @media (max-width: 767px) {
-  /* Increase spacing between controls */
-  .parameter-panel__controls > * + * {
-    margin-top: var(--space-1);
+  .parameter-panel__controls {
+    gap: var(--space-3);
   }
 
   /* Ensure all interactive elements have 44px touch targets */
@@ -131,4 +130,56 @@
   .parameter-panel__select {
     min-height: 44px;
   }
+
+  /* Compact layout for vector2 in Drawer */
+  .parameter-panel__vector2-axes {
+    padding-inline-start: var(--space-2);
+    gap: var(--space-2);
+  }
+}
+
+/* Collapsible parameter groups */
+
+.parameter-panel__group {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.parameter-panel__group > summary {
+  font-family: var(--font-body, sans-serif);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  list-style: none;
+  user-select: none;
+  padding: var(--space-1) 0;
+}
+
+.parameter-panel__group > summary::-webkit-details-marker {
+  display: none;
+}
+
+.parameter-panel__group > summary::before {
+  content: '\25B6';
+  font-size: 0.625rem;
+  margin-inline-end: var(--space-2);
+  transition: transform var(--transition-fast);
+}
+
+.parameter-panel__group[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.parameter-panel__group-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-block-start: var(--space-2);
 }

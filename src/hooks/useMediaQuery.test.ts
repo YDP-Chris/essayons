@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import { useMediaQuery, useIsMobile, useIsTablet, useIsDesktop } from './useMediaQuery'
+import {
+  useMediaQuery,
+  useIsMobile,
+  useIsTablet,
+  useIsDesktop,
+  useIsLandscape,
+} from './useMediaQuery'
 
 describe('useMediaQuery', () => {
   beforeEach(() => {
@@ -43,5 +49,22 @@ describe('useMediaQuery', () => {
   it('useIsDesktop returns a boolean', () => {
     const { result } = renderHook(() => useIsDesktop())
     expect(typeof result.current).toBe('boolean')
+  })
+
+  it('useIsLandscape returns a boolean', () => {
+    const { result } = renderHook(() => useIsLandscape())
+    expect(typeof result.current).toBe('boolean')
+  })
+
+  it('useIsLandscape returns false by default', () => {
+    const { result } = renderHook(() => useIsLandscape())
+    expect(result.current).toBe(false)
+  })
+
+  it('useIsLandscape uses correct media query', () => {
+    renderHook(() => useIsLandscape())
+    expect(window.matchMedia).toHaveBeenCalledWith(
+      '(orientation: landscape) and (max-height: 500px)',
+    )
   })
 })

@@ -1,0 +1,59 @@
+/* GestureHint — translucent overlay for touch gesture hints */
+
+.gesture-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.55);
+  z-index: 50;
+  cursor: pointer;
+  animation: gesture-hint-fade-in 300ms ease-out;
+}
+
+.gesture-hint__content {
+  display: flex;
+  gap: var(--space-8);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.gesture-hint__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.gesture-hint__icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius-full);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.gesture-hint__text {
+  font-family: var(--font-body, sans-serif);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+@keyframes gesture-hint-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gesture-hint {
+    animation: none;
+  }
+}
