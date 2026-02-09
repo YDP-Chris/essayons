@@ -2,10 +2,11 @@
  * OnboardingTutorial — orchestrator that manages the full tutorial flow.
  *
  * Renders the current TutorialStep, handles keyboard shortcuts (ESC, arrows),
- * implements a focus trap, and announces step changes to screen readers.
+ * implements a focus trap, announces step changes to screen readers, and
+ * coordinates exit/enter transitions between steps.
  */
 
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
 import { TUTORIAL_STEPS } from './tutorial-steps.ts'
 import { TutorialStepComponent } from './TutorialStep.tsx'
 import type { UseTutorialReturn } from './use-tutorial.ts'
@@ -28,6 +29,11 @@ export function OnboardingTutorial({ tutorial }: OnboardingTutorialProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const announceRef = useRef<HTMLDivElement>(null)
 
+  // Transition state: when navigating between steps, we play an exit
+  // animation on the current tooltip before advancing/retreating.
+  const [transitioning, setTransitioning] = useState(false)
+  const pendingActionRef = useRef<(() => void) | null>(null)
+
   // Screen reader announcements
   useEffect(() => {
     if (!isActive) return
@@ -37,27 +43,57 @@ export function OnboardingTutorial({ tutorial }: OnboardingTutorialProps) {
     }
   }, [isActive, currentStep, totalSteps])
 
+  // Start a transition: trigger exit animation, then run the action
+  const startTransition = useCallback((action: () => void) => {
+    setTransitioning(true)
+    pendingActionRef.current = action
+  }, [])
+
+  // Called when exit animation finishes
+  const handleExitComplete = useCallback(() => {
+    const action = pendingActionRef.current
+    pendingActionRef.current = null
+    setTransitioning(false)
+    if (action) action()
+  }, [])
+
+  // Wrapped navigation that triggers transitions
+  const handleNext = useCallback(() => {
+    if (transitioning) return
+    startTransition(next)
+  }, [transitioning, startTransition, next])
+
+  const handlePrevious = useCallback(() => {
+    if (transitioning) return
+    startTransition(previous)
+  }, [transitioning, startTransition, previous])
+
+  const handleSkip = useCallback(() => {
+    if (transitioning) return
+    skip()
+  }, [transitioning, skip])
+
   // Keyboard handler
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (!isActive) return
+      if (!isActive || transitioning) return
 
       switch (e.key) {
         case 'Escape':
           e.preventDefault()
-          skip()
+          handleSkip()
           break
         case 'ArrowRight':
           e.preventDefault()
-          next()
+          handleNext()
           break
         case 'ArrowLeft':
           e.preventDefault()
-          previous()
+          handlePrevious()
           break
       }
     },
-    [isActive, next, previous, skip],
+    [isActive, transitioning, handleNext, handlePrevious, handleSkip],
   )
 
   useEffect(() => {
@@ -137,10 +173,13 @@ export function OnboardingTutorial({ tutorial }: OnboardingTutorialProps) {
         step={step}
         stepNumber={currentStep + 1}
         totalSteps={totalSteps}
-        onNext={next}
-        onPrevious={previous}
-        onSkip={skip}
+        onNext={handleNext}
+        onPrevious={handlePrevious}
+        onSkip={handleSkip}
         onDismiss={dismiss}
+        exiting={transitioning}
+        disabled={transitioning}
+        onExitComplete={handleExitComplete}
       />
     </div>
   )

@@ -2,7 +2,7 @@
  * Unit tests for onboarding tutorial utilities and hook.
  *
  * Covers localStorage functions, first-visit detection, state transitions,
- * and tutorial step definitions.
+ * tutorial step definitions, and brand voice compliance.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
@@ -214,5 +214,51 @@ describe('TUTORIAL_STEPS', () => {
 
   it('ends with the share step', () => {
     expect(TUTORIAL_STEPS[TUTORIAL_STEPS.length - 1]?.id).toBe('share')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Brand voice compliance
+// ---------------------------------------------------------------------------
+
+describe('Brand voice compliance', () => {
+  const forbiddenWords = [
+    'learn',
+    'study',
+    'memorize',
+    'users',
+    'students',
+    'game',
+    'module',
+    'lesson',
+    'simplified',
+    'approximated',
+  ]
+
+  it('step content does not contain forbidden brand voice words', () => {
+    for (const step of TUTORIAL_STEPS) {
+      const text = `${step.title} ${step.content}`.toLowerCase()
+      for (const word of forbiddenWords) {
+        expect(text).not.toContain(word)
+      }
+    }
+  })
+
+  it('step content uses second-person voice (contains "you" or active verbs)', () => {
+    // At least some steps should use "you" or active verbs like "try", "drag", "watch"
+    const allContent = TUTORIAL_STEPS.map((s) => s.content)
+      .join(' ')
+      .toLowerCase()
+    expect(allContent).toContain('you')
+  })
+
+  it('step content uses brand-approved words (try, experiment, discover, crash)', () => {
+    const allContent = TUTORIAL_STEPS.map((s) => s.content)
+      .join(' ')
+      .toLowerCase()
+    const brandWords = ['try', 'experiment', 'discover', 'crash']
+    const usedBrandWords = brandWords.filter((word) => allContent.includes(word))
+    // At least 2 of 4 brand words should appear across all steps
+    expect(usedBrandWords.length).toBeGreaterThanOrEqual(2)
   })
 })

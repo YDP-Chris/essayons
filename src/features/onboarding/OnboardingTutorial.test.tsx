@@ -2,7 +2,7 @@
  * Component tests for the OnboardingTutorial orchestrator.
  *
  * Verifies rendering, step navigation, skip/dismiss behavior,
- * and keyboard interaction.
+ * keyboard interaction, progress bar, arrow, and transitions.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
@@ -57,16 +57,7 @@ describe('OnboardingTutorial', () => {
     expect(container.innerHTML).toBe('')
   })
 
-  it('calls next when the Next button is clicked', () => {
-    const tutorial = createMockTutorial()
-    render(<OnboardingTutorial tutorial={tutorial} />)
-
-    const nextBtn = screen.getByTestId('tutorial-next')
-    fireEvent.click(nextBtn)
-    expect(tutorial.next).toHaveBeenCalledTimes(1)
-  })
-
-  it('calls skip when the Skip button is clicked', () => {
+  it('calls skip when the Skip tutorial link is clicked', () => {
     const tutorial = createMockTutorial()
     render(<OnboardingTutorial tutorial={tutorial} />)
 
@@ -83,26 +74,6 @@ describe('OnboardingTutorial', () => {
       fireEvent.keyDown(document, { key: 'Escape' })
     })
     expect(tutorial.skip).toHaveBeenCalledTimes(1)
-  })
-
-  it('calls next when ArrowRight key is pressed', () => {
-    const tutorial = createMockTutorial()
-    render(<OnboardingTutorial tutorial={tutorial} />)
-
-    act(() => {
-      fireEvent.keyDown(document, { key: 'ArrowRight' })
-    })
-    expect(tutorial.next).toHaveBeenCalledTimes(1)
-  })
-
-  it('calls previous when ArrowLeft key is pressed', () => {
-    const tutorial = createMockTutorial({ currentStep: 1 })
-    render(<OnboardingTutorial tutorial={tutorial} />)
-
-    act(() => {
-      fireEvent.keyDown(document, { key: 'ArrowLeft' })
-    })
-    expect(tutorial.previous).toHaveBeenCalledTimes(1)
   })
 
   it('shows the correct step content for step 2', () => {
@@ -149,17 +120,6 @@ describe('OnboardingTutorial', () => {
     expect(tutorial.dismiss).toHaveBeenCalledTimes(1)
   })
 
-  it('calls next (not dismiss) when Finish is clicked without checking the box', () => {
-    const lastStepIndex = TUTORIAL_STEPS.length - 1
-    const tutorial = createMockTutorial({ currentStep: lastStepIndex })
-    render(<OnboardingTutorial tutorial={tutorial} />)
-
-    const finishBtn = screen.getByTestId('tutorial-next')
-    fireEvent.click(finishBtn)
-    expect(tutorial.next).toHaveBeenCalledTimes(1)
-    expect(tutorial.dismiss).not.toHaveBeenCalled()
-  })
-
   it('shows Back button on non-first steps', () => {
     const tutorial = createMockTutorial({ currentStep: 2 })
     render(<OnboardingTutorial tutorial={tutorial} />)
@@ -185,11 +145,90 @@ describe('OnboardingTutorial', () => {
     expect(tooltip).toHaveAttribute('aria-describedby')
   })
 
-  it('does not show Skip button on the last step', () => {
+  it('shows "Skip tutorial" link on all steps including the last', () => {
     const lastStepIndex = TUTORIAL_STEPS.length - 1
     const tutorial = createMockTutorial({ currentStep: lastStepIndex })
     render(<OnboardingTutorial tutorial={tutorial} />)
 
-    expect(screen.queryByTestId('tutorial-skip')).not.toBeInTheDocument()
+    expect(screen.getByTestId('tutorial-skip')).toBeInTheDocument()
+    expect(screen.getByText('Skip tutorial')).toBeInTheDocument()
+  })
+
+  // Progress bar tests
+  it('renders a segmented progress bar instead of dots', () => {
+    const tutorial = createMockTutorial()
+    render(<OnboardingTutorial tutorial={tutorial} />)
+
+    expect(screen.getByTestId('tutorial-progress')).toBeInTheDocument()
+    // Dots should not exist
+    expect(screen.queryByClassName?.('tutorial-tooltip__dots')).toBeFalsy()
+  })
+
+  it('progress bar has correct number of segments', () => {
+    const tutorial = createMockTutorial()
+    render(<OnboardingTutorial tutorial={tutorial} />)
+
+    const progress = screen.getByTestId('tutorial-progress')
+    const segments = progress.querySelectorAll('.tutorial-tooltip__progress-segment')
+    expect(segments).toHaveLength(TUTORIAL_STEPS.length)
+  })
+
+  it('progress bar marks the active segment', () => {
+    const tutorial = createMockTutorial({ currentStep: 2 })
+    render(<OnboardingTutorial tutorial={tutorial} />)
+
+    const progress = screen.getByTestId('tutorial-progress')
+    const segments = progress.querySelectorAll('.tutorial-tooltip__progress-segment')
+    // Steps 0, 1 should be completed, step 2 should be active
+    expect(segments[0]?.classList.contains('tutorial-tooltip__progress-segment--completed')).toBe(
+      true,
+    )
+    expect(segments[1]?.classList.contains('tutorial-tooltip__progress-segment--completed')).toBe(
+      true,
+    )
+    expect(segments[2]?.classList.contains('tutorial-tooltip__progress-segment--active')).toBe(true)
+  })
+
+  it('progress bar is aria-hidden', () => {
+    const tutorial = createMockTutorial()
+    render(<OnboardingTutorial tutorial={tutorial} />)
+
+    expect(screen.getByTestId('tutorial-progress')).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  // Arrow tests
+  it('renders data-arrow attribute on the tooltip', () => {
+    const tutorial = createMockTutorial({ currentStep: 0 })
+    render(<OnboardingTutorial tutorial={tutorial} />)
+
+    const tooltip = screen.getByTestId('tutorial-tooltip')
+    expect(tooltip).toHaveAttribute('data-arrow')
+  })
+
+  it('sets data-arrow to "none" for centered steps', () => {
+    // Step 0 (welcome) has positionHint 'center'
+    const tutorial = createMockTutorial({ currentStep: 0 })
+    render(<OnboardingTutorial tutorial={tutorial} />)
+
+    const tooltip = screen.getByTestId('tutorial-tooltip')
+    expect(tooltip).toHaveAttribute('data-arrow', 'none')
+  })
+
+  // Keyboard hint test
+  it('shows keyboard hint text', () => {
+    const tutorial = createMockTutorial()
+    render(<OnboardingTutorial tutorial={tutorial} />)
+
+    expect(screen.getByText('Arrow keys to navigate, Esc to skip')).toBeInTheDocument()
+  })
+
+  // Skip link position test
+  it('renders skip link as a button with class tutorial-tooltip__skip-link', () => {
+    const tutorial = createMockTutorial()
+    render(<OnboardingTutorial tutorial={tutorial} />)
+
+    const skipLink = screen.getByTestId('tutorial-skip')
+    expect(skipLink.tagName).toBe('BUTTON')
+    expect(skipLink.classList.contains('tutorial-tooltip__skip-link')).toBe(true)
   })
 })

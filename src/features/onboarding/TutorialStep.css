@@ -1,16 +1,45 @@
 /* TutorialStep — spotlight overlay and tooltip styles */
 
-/* Fade-in animation */
-@keyframes tutorial-fade-in {
+/* ----------------------------------------------------------------
+ * Animations
+ * ---------------------------------------------------------------- */
+
+@keyframes tutorial-enter {
   from {
     opacity: 0;
+    transform: translateY(-8px);
   }
   to {
     opacity: 1;
+    transform: translateY(0);
   }
 }
 
-/* Overlay backdrop */
+@keyframes tutorial-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes spotlight-pulse {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* ----------------------------------------------------------------
+ * Overlay backdrop
+ * ---------------------------------------------------------------- */
+
 .tutorial-overlay {
   position: fixed;
   inset: 0;
@@ -30,53 +59,120 @@
   height: 100%;
 }
 
-/* Tooltip */
+/* Glow ring around spotlight cutout */
+.tutorial-overlay__glow {
+  animation: spotlight-pulse 2s ease-in-out infinite;
+}
+
+/* ----------------------------------------------------------------
+ * Tooltip card
+ * ---------------------------------------------------------------- */
+
 .tutorial-tooltip {
   position: fixed;
   z-index: 10001;
-  background: #ffffff;
+  background: var(--paper, #f7f6f3);
   border-radius: var(--radius-lg, 16px);
-  box-shadow: var(--shadow-xl, 0 16px 48px rgba(26, 26, 46, 0.16));
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(26, 26, 46, 0.12));
   padding: var(--space-6, 24px);
-  max-width: 380px;
+  max-width: 400px;
   width: calc(100% - 32px);
-  border-top: 3px solid #00d4aa;
   pointer-events: auto;
 }
 
-/* Fade-in via CSS animation on mount (component re-mounts via key prop) */
+/* Enter animation */
 .tutorial-tooltip--animate-in {
-  animation: tutorial-fade-in 250ms ease forwards;
+  animation: tutorial-enter 200ms ease-out forwards;
 }
 
+/* Exit animation */
+.tutorial-tooltip--exit {
+  animation: tutorial-exit 150ms ease-in forwards;
+  pointer-events: none;
+}
+
+/* Centered (welcome step / fallback) */
 .tutorial-tooltip--center {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
 }
 
-/* Step counter */
-.tutorial-tooltip__counter {
-  font-family: var(--font-body, 'DM Sans', sans-serif);
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: #00d4aa;
+.tutorial-tooltip--center.tutorial-tooltip--animate-in {
+  animation: none;
+  opacity: 1;
+}
+
+/* ----------------------------------------------------------------
+ * Tooltip header row (skip link)
+ * ---------------------------------------------------------------- */
+
+.tutorial-tooltip__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   margin-bottom: var(--space-2, 8px);
 }
 
-/* Title */
+/* ----------------------------------------------------------------
+ * Step counter — IBM Plex Mono, uppercase, domain accent color
+ * ---------------------------------------------------------------- */
+
+.tutorial-tooltip__counter {
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--domain-accent, #00d4aa);
+}
+
+/* ----------------------------------------------------------------
+ * Skip link — top-right of tooltip
+ * ---------------------------------------------------------------- */
+
+.tutorial-tooltip__skip-link {
+  font-family: var(--font-body, 'DM Sans', sans-serif);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--stone, #8e8ea0);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--space-1, 4px) var(--space-2, 8px);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color var(--transition-fast, 120ms ease);
+}
+
+.tutorial-tooltip__skip-link:hover {
+  color: var(--slate, #4a4a68);
+  text-decoration: underline;
+}
+
+.tutorial-tooltip__skip-link:focus-visible {
+  outline: 3px solid var(--think, #7b68ee);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm, 4px);
+}
+
+/* ----------------------------------------------------------------
+ * Title — Instrument Serif
+ * ---------------------------------------------------------------- */
+
 .tutorial-tooltip__title {
   font-family: var(--font-display, 'Instrument Serif', serif);
   font-weight: 400;
-  font-size: 1.375rem;
+  font-size: 1.5rem;
   line-height: 1.2;
   color: var(--ink, #1a1a2e);
   margin: 0 0 var(--space-2, 8px) 0;
 }
 
-/* Content */
+/* ----------------------------------------------------------------
+ * Content — DM Sans
+ * ---------------------------------------------------------------- */
+
 .tutorial-tooltip__content {
   font-family: var(--font-body, 'DM Sans', sans-serif);
   font-size: 1rem;
@@ -85,30 +181,39 @@
   margin: 0 0 var(--space-5, 20px) 0;
 }
 
-/* Progress dots */
-.tutorial-tooltip__dots {
-  display: flex;
-  gap: var(--space-2, 8px);
+/* ----------------------------------------------------------------
+ * Progress bar — segmented track
+ * ---------------------------------------------------------------- */
+
+.tutorial-tooltip__progress {
   margin-bottom: var(--space-5, 20px);
 }
 
-.tutorial-tooltip__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--color-border-light, #d4d4d8);
-  transition: background 200ms ease;
+.tutorial-tooltip__progress-track {
+  display: flex;
+  gap: 2px;
+  height: 4px;
 }
 
-.tutorial-tooltip__dot--active {
-  background: #00d4aa;
+.tutorial-tooltip__progress-segment {
+  flex: 1;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--stone, #8e8ea0) 20%, transparent);
+  transition: background 250ms ease;
 }
 
-.tutorial-tooltip__dot--completed {
-  background: color-mix(in srgb, #00d4aa 50%, #ffffff);
+.tutorial-tooltip__progress-segment--completed {
+  background: var(--growth, #2ec4b6);
 }
 
-/* Buttons row */
+.tutorial-tooltip__progress-segment--active {
+  background: var(--domain-accent, #00d4aa);
+}
+
+/* ----------------------------------------------------------------
+ * Action buttons
+ * ---------------------------------------------------------------- */
+
 .tutorial-tooltip__actions {
   display: flex;
   align-items: center;
@@ -121,20 +226,31 @@
   font-weight: 500;
   border: none;
   border-radius: var(--radius-md, 8px);
-  padding: var(--space-2, 8px) var(--space-4, 16px);
+  padding: 10px 20px;
   cursor: pointer;
   transition:
     background var(--transition-fast, 120ms ease),
-    color var(--transition-fast, 120ms ease);
+    color var(--transition-fast, 120ms ease),
+    opacity var(--transition-fast, 120ms ease);
 }
 
+.tutorial-tooltip__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Next / Finish — filled primary button with domain accent */
 .tutorial-tooltip__btn--next {
-  background: #00d4aa;
+  background: var(--domain-accent, #00d4aa);
   color: #ffffff;
+  min-width: 100px;
 }
 
-.tutorial-tooltip__btn--next:hover {
-  background: color-mix(in srgb, #00d4aa 85%, #000000);
+.tutorial-tooltip__btn--next:hover:not(:disabled) {
+  background: var(
+    --domain-accent-dark,
+    color-mix(in srgb, var(--domain-accent, #00d4aa) 80%, #000000)
+  );
 }
 
 .tutorial-tooltip__btn--next:focus-visible {
@@ -142,28 +258,15 @@
   outline-offset: 2px;
 }
 
-.tutorial-tooltip__btn--skip {
-  background: transparent;
-  color: var(--stone, #8e8ea0);
-}
-
-.tutorial-tooltip__btn--skip:hover {
-  color: var(--slate, #4a4a68);
-  background: var(--color-border-light, rgba(142, 142, 160, 0.1));
-}
-
-.tutorial-tooltip__btn--skip:focus-visible {
-  outline: 3px solid var(--think, #7b68ee);
-  outline-offset: 2px;
-}
-
+/* Back — ghost/outlined button */
 .tutorial-tooltip__btn--prev {
   background: transparent;
   color: var(--slate, #4a4a68);
+  border: 1px solid var(--slate, #4a4a68);
 }
 
-.tutorial-tooltip__btn--prev:hover {
-  background: var(--color-border-light, rgba(142, 142, 160, 0.1));
+.tutorial-tooltip__btn--prev:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--slate, #4a4a68) 10%, transparent);
 }
 
 .tutorial-tooltip__btn--prev:focus-visible {
@@ -171,21 +274,40 @@
   outline-offset: 2px;
 }
 
-/* "Don't show again" checkbox */
+/* ----------------------------------------------------------------
+ * Keyboard hint
+ * ---------------------------------------------------------------- */
+
+.tutorial-tooltip__keyboard-hint {
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace);
+  font-size: 0.75rem;
+  color: var(--stone, #8e8ea0);
+  margin-top: var(--space-2, 8px);
+}
+
+/* ----------------------------------------------------------------
+ * "Don't show again" checkbox
+ * ---------------------------------------------------------------- */
+
 .tutorial-tooltip__dismiss {
   display: flex;
   align-items: center;
   gap: var(--space-2, 8px);
   margin-top: var(--space-4, 16px);
   padding-top: var(--space-3, 12px);
-  border-top: 1px solid var(--color-border-light, #e4e4e7);
+  border-top: 1px solid color-mix(in srgb, var(--stone, #8e8ea0) 20%, transparent);
 }
 
 .tutorial-tooltip__dismiss-checkbox {
-  accent-color: #00d4aa;
+  accent-color: var(--domain-accent, #00d4aa);
   width: 16px;
   height: 16px;
   cursor: pointer;
+}
+
+.tutorial-tooltip__dismiss-checkbox:focus-visible {
+  outline: 3px solid var(--think, #7b68ee);
+  outline-offset: 2px;
 }
 
 .tutorial-tooltip__dismiss-label {
@@ -196,7 +318,70 @@
   user-select: none;
 }
 
-/* Mobile: full-width tooltip at bottom */
+/* ----------------------------------------------------------------
+ * Directional arrow — CSS ::before pseudo-element
+ * ---------------------------------------------------------------- */
+
+.tutorial-tooltip[data-arrow='up']::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: var(--arrow-offset, 32px);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 8px solid var(--paper, #f7f6f3);
+  filter: drop-shadow(0 -2px 2px rgba(26, 26, 46, 0.06));
+}
+
+.tutorial-tooltip[data-arrow='down']::before {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: var(--arrow-offset, 32px);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid var(--paper, #f7f6f3);
+  filter: drop-shadow(0 2px 2px rgba(26, 26, 46, 0.06));
+}
+
+.tutorial-tooltip[data-arrow='left']::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: var(--arrow-offset, 24px);
+  width: 0;
+  height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-right: 8px solid var(--paper, #f7f6f3);
+  filter: drop-shadow(-2px 0 2px rgba(26, 26, 46, 0.06));
+}
+
+.tutorial-tooltip[data-arrow='right']::before {
+  content: '';
+  position: absolute;
+  right: -8px;
+  top: var(--arrow-offset, 24px);
+  width: 0;
+  height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-left: 8px solid var(--paper, #f7f6f3);
+  filter: drop-shadow(2px 0 2px rgba(26, 26, 46, 0.06));
+}
+
+.tutorial-tooltip[data-arrow='none']::before {
+  display: none;
+}
+
+/* ----------------------------------------------------------------
+ * Mobile: full-width bottom sheet
+ * ---------------------------------------------------------------- */
+
 @media (max-width: 767px) {
   .tutorial-tooltip {
     position: fixed;
@@ -208,6 +393,7 @@
     width: 100%;
     border-radius: var(--radius-lg, 16px) var(--radius-lg, 16px) 0 0;
     transform: none;
+    padding: var(--space-5, 20px) var(--space-6, 24px);
     padding-bottom: calc(var(--space-6, 24px) + env(safe-area-inset-bottom, 0px));
   }
 
@@ -216,9 +402,54 @@
     inset-inline-start: 0;
     transform: none;
   }
+
+  /* Drag handle pill at top */
+  .tutorial-tooltip__drag-handle {
+    display: block;
+  }
+
+  /* Hide directional arrow on mobile */
+  .tutorial-tooltip::before {
+    display: none !important;
+  }
+
+  /* Larger touch targets */
+  .tutorial-tooltip__btn {
+    min-height: 48px;
+    padding: 12px 24px;
+    font-size: 1rem;
+  }
+
+  .tutorial-tooltip__skip-link {
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-2, 8px) var(--space-3, 12px);
+  }
+
+  .tutorial-tooltip__content {
+    font-size: 1rem;
+  }
+
+  .tutorial-tooltip__progress-track {
+    width: 100%;
+  }
 }
 
-/* Reduced motion */
+/* Drag handle — visible on mobile only */
+.tutorial-tooltip__drag-handle {
+  display: none;
+  width: 40px;
+  height: 4px;
+  background: color-mix(in srgb, var(--stone, #8e8ea0) 40%, transparent);
+  border-radius: var(--radius-full, 9999px);
+  margin: 0 auto var(--space-3, 12px);
+}
+
+/* ----------------------------------------------------------------
+ * Reduced motion
+ * ---------------------------------------------------------------- */
+
 @media (prefers-reduced-motion: reduce) {
   .tutorial-tooltip {
     transition: none;
@@ -228,4 +459,56 @@
     animation: none;
     opacity: 1;
   }
+
+  .tutorial-tooltip--exit {
+    animation: none;
+    opacity: 0;
+  }
+
+  .tutorial-overlay__glow {
+    animation: none;
+    opacity: 0.5;
+  }
+
+  .tutorial-tooltip__progress-segment {
+    transition: none;
+  }
+}
+
+/* ----------------------------------------------------------------
+ * Restart tutorial button in episode nav
+ * ---------------------------------------------------------------- */
+
+.episode-nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: var(--space-1, 4px) var(--space-4, 16px);
+}
+
+.episode-nav__restart-tutorial {
+  font-family: var(--font-body, 'DM Sans', sans-serif);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--stone, #8e8ea0);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--stone, #8e8ea0) 30%, transparent);
+  border-radius: var(--radius-md, 8px);
+  padding: var(--space-1, 4px) var(--space-3, 12px);
+  cursor: pointer;
+  transition:
+    color var(--transition-fast, 120ms ease),
+    border-color var(--transition-fast, 120ms ease),
+    background var(--transition-fast, 120ms ease);
+}
+
+.episode-nav__restart-tutorial:hover {
+  color: var(--slate, #4a4a68);
+  border-color: var(--slate, #4a4a68);
+  background: color-mix(in srgb, var(--slate, #4a4a68) 8%, transparent);
+}
+
+.episode-nav__restart-tutorial:focus-visible {
+  outline: 3px solid var(--think, #7b68ee);
+  outline-offset: 2px;
 }

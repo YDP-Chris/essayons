@@ -1,8 +1,9 @@
 /**
  * TutorialStep — renders a spotlight overlay with a tooltip for a single step.
  *
- * Uses an SVG mask to cut out a transparent window around the target element.
- * Falls back to a centered tooltip when the target selector does not match.
+ * Uses an SVG mask to cut out a transparent window around the target element,
+ * with an animated glow ring. Includes a directional arrow, segmented progress
+ * bar, and brand-styled controls.
  */
 
 import { useEffect, useState, useRef, useCallback } from 'react'
@@ -28,6 +29,12 @@ export interface TutorialStepProps {
   readonly onSkip: () => void
   /** Called when the user checks "Don't show again" and finishes. */
   readonly onDismiss: () => void
+  /** Whether the tooltip is in exit transition. */
+  readonly exiting?: boolean
+  /** Whether controls should be disabled (during transitions). */
+  readonly disabled?: boolean
+  /** Called when exit animation completes. */
+  readonly onExitComplete?: () => void
 }
 
 // ---------------------------------------------------------------------------
@@ -75,7 +82,7 @@ function computeTooltipPosition(
   }
 
   const gap = 12
-  const tooltipWidth = 380
+  const tooltipWidth = 400
 
   switch (hint) {
     case 'bottom':
@@ -107,6 +114,27 @@ function computeTooltipPosition(
   }
 }
 
+/**
+ * Compute the arrow direction from the position hint.
+ * The arrow points FROM the tooltip TOWARD the target, so if the tooltip
+ * is below the target (hint='bottom'), the arrow points up.
+ */
+function getArrowDirection(hint: PositionHint, centered: boolean): string {
+  if (centered) return 'none'
+  switch (hint) {
+    case 'bottom':
+      return 'up'
+    case 'top':
+      return 'down'
+    case 'left':
+      return 'right'
+    case 'right':
+      return 'left'
+    default:
+      return 'none'
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -119,6 +147,9 @@ export function TutorialStepComponent({
   onPrevious,
   onSkip,
   onDismiss,
+  exiting = false,
+  disabled = false,
+  onExitComplete,
 }: TutorialStepProps) {
   // Compute initial layout synchronously to avoid set-state-in-effect
   const [targetRect, setTargetRect] = useState<Rect | null>(() =>
@@ -133,7 +164,7 @@ export function TutorialStepComponent({
   const isLastStep = stepNumber === totalSteps
   const isFirstStep = stepNumber === 1
 
-  // Re-measure on resize/scroll (only via event callbacks — not synchronous in effect)
+  // Re-measure on resize/scroll (only via event callbacks)
   const handleResize = useCallback(() => {
     setTargetRect(getTargetRect(step.targetSelector))
     setIsMobile(window.innerWidth < 768)
@@ -148,6 +179,19 @@ export function TutorialStepComponent({
     }
   }, [handleResize])
 
+  // Handle exit animation end
+  useEffect(() => {
+    if (!exiting || !tooltipRef.current) return
+
+    const tooltip = tooltipRef.current
+    const handleAnimationEnd = () => {
+      onExitComplete?.()
+    }
+
+    tooltip.addEventListener('animationend', handleAnimationEnd)
+    return () => tooltip.removeEventListener('animationend', handleAnimationEnd)
+  }, [exiting, onExitComplete])
+
   const tooltipPos = computeTooltipPosition(targetRect, step.positionHint, isMobile)
 
   const tooltipStyle: React.CSSProperties = tooltipPos.centered
@@ -160,11 +204,22 @@ export function TutorialStepComponent({
       }
 
   const handleNext = () => {
+    if (disabled) return
     if (isLastStep && dontShowAgain) {
       onDismiss()
     } else {
       onNext()
     }
+  }
+
+  const handlePrevious = () => {
+    if (disabled) return
+    onPrevious()
+  }
+
+  const handleSkip = () => {
+    if (disabled) return
+    onSkip()
   }
 
   // Viewport dimensions for SVG mask
@@ -174,10 +229,12 @@ export function TutorialStepComponent({
   const titleId = `tutorial-title-${step.id}`
   const contentId = `tutorial-content-${step.id}`
 
+  const arrowDir = getArrowDirection(step.positionHint, tooltipPos.centered)
+
   return (
     // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
-    <div className="tutorial-overlay" data-testid="tutorial-overlay" onClick={onSkip}>
-      {/* SVG spotlight mask — purely visual, pointer-events: none in CSS */}
+    <div className="tutorial-overlay" data-testid="tutorial-overlay" onClick={handleSkip}>
+      {/* SVG spotlight mask */}
       <svg className="tutorial-overlay__backdrop tutorial-overlay__mask" aria-hidden="true">
         <defs>
           <mask id={`spotlight-mask-${step.id}`}>
@@ -191,6 +248,10 @@ export function TutorialStepComponent({
                 rx={8}
                 ry={8}
                 fill="black"
+                style={{
+                  transition:
+                    'x 250ms ease-in-out, y 250ms ease-in-out, width 250ms ease-in-out, height 250ms ease-in-out',
+                }}
               />
             )}
           </mask>
@@ -203,15 +264,35 @@ export function TutorialStepComponent({
           fill="rgba(0,0,0,0.7)"
           mask={`url(#spotlight-mask-${step.id})`}
         />
+        {/* Glow ring around target */}
+        {targetRect && (
+          <rect
+            className="tutorial-overlay__glow"
+            x={targetRect.left}
+            y={targetRect.top}
+            width={targetRect.width}
+            height={targetRect.height}
+            rx={8}
+            ry={8}
+            fill="none"
+            stroke="var(--domain-accent, #00d4aa)"
+            strokeWidth={2}
+            style={{
+              transition:
+                'x 250ms ease-in-out, y 250ms ease-in-out, width 250ms ease-in-out, height 250ms ease-in-out',
+            }}
+            data-testid="tutorial-glow"
+          />
+        )}
       </svg>
 
-      {/* Tooltip — uses CSS animation for fade-in on mount */}
+      {/* Tooltip card */}
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */}
       <div
         ref={tooltipRef}
         className={[
           'tutorial-tooltip',
-          'tutorial-tooltip--animate-in',
+          exiting ? 'tutorial-tooltip--exit' : 'tutorial-tooltip--animate-in',
           tooltipPos.centered ? 'tutorial-tooltip--center' : '',
         ]
           .filter(Boolean)
@@ -222,10 +303,26 @@ export function TutorialStepComponent({
         aria-describedby={contentId}
         aria-modal="true"
         data-testid="tutorial-tooltip"
+        data-arrow={arrowDir}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="tutorial-tooltip__counter">
-          Step {stepNumber} of {totalSteps}
+        {/* Drag handle for mobile bottom sheet */}
+        <div className="tutorial-tooltip__drag-handle" aria-hidden="true" />
+
+        {/* Header: counter + skip link */}
+        <div className="tutorial-tooltip__header">
+          <div className="tutorial-tooltip__counter" data-testid="tutorial-counter">
+            Step {stepNumber} of {totalSteps}
+          </div>
+          <button
+            type="button"
+            className="tutorial-tooltip__skip-link"
+            onClick={handleSkip}
+            disabled={disabled}
+            data-testid="tutorial-skip"
+          >
+            Skip tutorial
+          </button>
         </div>
 
         <h2 className="tutorial-tooltip__title" id={titleId}>
@@ -236,28 +333,36 @@ export function TutorialStepComponent({
           {step.content}
         </p>
 
-        {/* Progress dots */}
-        <div className="tutorial-tooltip__dots" aria-hidden="true">
-          {Array.from({ length: totalSteps }, (_, i) => (
-            <span
-              key={i}
-              className={[
-                'tutorial-tooltip__dot',
-                i === stepNumber - 1 ? 'tutorial-tooltip__dot--active' : '',
-                i < stepNumber - 1 ? 'tutorial-tooltip__dot--completed' : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-            />
-          ))}
+        {/* Segmented progress bar */}
+        <div
+          className="tutorial-tooltip__progress"
+          aria-hidden="true"
+          data-testid="tutorial-progress"
+        >
+          <div className="tutorial-tooltip__progress-track">
+            {Array.from({ length: totalSteps }, (_, i) => (
+              <div
+                key={i}
+                className={[
+                  'tutorial-tooltip__progress-segment',
+                  i < stepNumber - 1 ? 'tutorial-tooltip__progress-segment--completed' : '',
+                  i === stepNumber - 1 ? 'tutorial-tooltip__progress-segment--active' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              />
+            ))}
+          </div>
         </div>
 
+        {/* Action buttons */}
         <div className="tutorial-tooltip__actions">
           {!isFirstStep && (
             <button
               type="button"
               className="tutorial-tooltip__btn tutorial-tooltip__btn--prev"
-              onClick={onPrevious}
+              onClick={handlePrevious}
+              disabled={disabled}
               data-testid="tutorial-prev"
             >
               Back
@@ -267,20 +372,16 @@ export function TutorialStepComponent({
             type="button"
             className="tutorial-tooltip__btn tutorial-tooltip__btn--next"
             onClick={handleNext}
+            disabled={disabled}
             data-testid="tutorial-next"
           >
             {isLastStep ? 'Finish' : 'Next'}
           </button>
-          {!isLastStep && (
-            <button
-              type="button"
-              className="tutorial-tooltip__btn tutorial-tooltip__btn--skip"
-              onClick={onSkip}
-              data-testid="tutorial-skip"
-            >
-              Skip
-            </button>
-          )}
+        </div>
+
+        {/* Keyboard hint */}
+        <div className="tutorial-tooltip__keyboard-hint" aria-hidden="true">
+          Arrow keys to navigate, Esc to skip
         </div>
 
         {/* "Don't show again" on final step */}
