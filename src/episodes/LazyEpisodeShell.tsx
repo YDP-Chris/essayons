@@ -19,6 +19,7 @@ const episodeLoaders: Record<string, () => Promise<unknown>> = {
   'gene-lab': () => import('@/episodes/gene-lab/index.ts'),
   'bridge-lab': () => import('@/episodes/bridge-lab/index.ts'),
   'timeline-lab': () => import('@/episodes/timeline-lab/index.ts'),
+  'wave-lab': () => import('@/episodes/wave-lab/index.ts'),
 }
 
 // ---------------------------------------------------------------------------

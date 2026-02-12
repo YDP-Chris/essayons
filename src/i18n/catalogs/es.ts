@@ -34,9 +34,13 @@ export const es: StringCatalog = {
       name: 'Laboratorio de Mercados',
       hook: 'Mira cómo la oferta y la demanda se encuentran. Colapsa mercados.',
     },
-    historyLab: {
-      name: 'Laboratorio de Historia',
-      hook: '¿Y si...? Cambia variables, observa consecuencias.',
+    timelineLab: {
+      name: 'Laboratorio de Línea Temporal',
+      hook: 'Derrumba imperios. Reescribe la historia.',
+    },
+    waveLab: {
+      name: 'Laboratorio de Ondas',
+      hook: 'Pulsa cuerdas. Observa la resonancia. Siente la física.',
     },
     geneLab: {
       name: 'Laboratorio Genético',

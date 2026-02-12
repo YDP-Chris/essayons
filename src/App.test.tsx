@@ -24,21 +24,21 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Start Exploring' })).toBeInTheDocument()
   })
 
-  it('renders all six episode cards', () => {
+  it('renders all episode cards', () => {
     render(<App />)
     expect(screen.getByText('Orbit Lab')).toBeInTheDocument()
     expect(screen.getByText('Citizen Lab')).toBeInTheDocument()
     expect(screen.getByText('Market Lab')).toBeInTheDocument()
-    expect(screen.getByText('History Lab')).toBeInTheDocument()
+    expect(screen.getByText('Timeline Lab')).toBeInTheDocument()
+    expect(screen.getByText('Wave Lab')).toBeInTheDocument()
     expect(screen.getByText('Gene Lab')).toBeInTheDocument()
     expect(screen.getByText('Bridge Lab')).toBeInTheDocument()
   })
 
-  it('shows Coming Soon badges for unavailable episodes', () => {
+  it('all episodes are available (no Coming Soon badges)', () => {
     render(<App />)
-    const badges = screen.getAllByText('Coming Soon')
-    // Only History Lab is unavailable now
-    expect(badges).toHaveLength(1)
+    const badges = screen.queryAllByText('Coming Soon')
+    expect(badges).toHaveLength(0)
   })
 
   it('makes Orbit Lab clickable', () => {

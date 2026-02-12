@@ -34,9 +34,13 @@ export const en: StringCatalog = {
       name: 'Market Lab',
       hook: 'Watch supply meet demand. Crash markets.',
     },
-    historyLab: {
-      name: 'History Lab',
-      hook: 'What if? Change variables, see consequences.',
+    timelineLab: {
+      name: 'Timeline Lab',
+      hook: 'Crash empires. Rewrite history.',
+    },
+    waveLab: {
+      name: 'Wave Lab',
+      hook: 'Pluck strings. See resonance. Feel the physics.',
     },
     geneLab: {
       name: 'Gene Lab',
