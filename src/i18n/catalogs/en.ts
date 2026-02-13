@@ -50,6 +50,10 @@ export const en: StringCatalog = {
       name: 'Bridge Lab',
       hook: 'Build structures. Apply loads. Watch them fail.',
     },
+    circuitLab: {
+      name: 'Circuit Lab',
+      hook: 'Build circuits. Apply voltage. See electrons flow.',
+    },
   },
   domains: {
     physics: 'Physics',

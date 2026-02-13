@@ -77,6 +77,15 @@ const episodes: Episode[] = [
     color: 'var(--engineering)',
     available: true,
   },
+  {
+    nameKey: 'episodes.circuitLab.name',
+    episodeId: 'circuit-lab',
+    domainKey: 'domains.engineering',
+    iconName: 'engineering',
+    hookKey: 'episodes.circuitLab.hook',
+    color: 'var(--engineering)',
+    available: true,
+  },
 ]
 
 export interface EpisodeGridProps {

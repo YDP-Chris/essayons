@@ -20,6 +20,7 @@ const episodeLoaders: Record<string, () => Promise<unknown>> = {
   'bridge-lab': () => import('@/episodes/bridge-lab/index.ts'),
   'timeline-lab': () => import('@/episodes/timeline-lab/index.ts'),
   'wave-lab': () => import('@/episodes/wave-lab/index.ts'),
+  'circuit-lab': () => import('@/episodes/circuit-lab/index.ts'),
 }
 
 // ---------------------------------------------------------------------------
