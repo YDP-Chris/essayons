@@ -77,6 +77,15 @@ const episodes: Episode[] = [
     color: 'var(--engineering)',
     available: true,
   },
+  {
+    nameKey: 'episodes.climateLab.name',
+    episodeId: 'climate-lab',
+    domainKey: 'domains.physics',
+    iconName: 'physics',
+    hookKey: 'episodes.climateLab.hook',
+    color: 'var(--physics)',
+    available: true,
+  },
 ]
 
 export interface EpisodeGridProps {

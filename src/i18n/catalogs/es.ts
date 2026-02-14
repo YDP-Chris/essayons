@@ -50,6 +50,10 @@ export const es: StringCatalog = {
       name: 'Laboratorio de Puentes',
       hook: 'Construye estructuras. Aplica cargas. Míralas fallar.',
     },
+    climateLab: {
+      name: 'Laboratorio Climático',
+      hook: 'Colapsa climas. Encuentra equilibrio.',
+    },
   },
   domains: {
     physics: 'Física',
