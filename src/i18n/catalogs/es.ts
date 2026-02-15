@@ -54,6 +54,10 @@ export const es: StringCatalog = {
       name: 'Laboratorio Climático',
       hook: 'Colapsa climas. Encuentra equilibrio.',
     },
+    electionLab: {
+      name: 'Laboratorio Electoral',
+      hook: 'Manipula sistemas de votación. Descubre paradojas democráticas.',
+    },
   },
   domains: {
     physics: 'Física',

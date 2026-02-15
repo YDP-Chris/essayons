@@ -21,6 +21,7 @@ const episodeLoaders: Record<string, () => Promise<unknown>> = {
   'timeline-lab': () => import('@/episodes/timeline-lab/index.ts'),
   'wave-lab': () => import('@/episodes/wave-lab/index.ts'),
   'climate-lab': () => import('@/episodes/climate-lab/index.ts'),
+  'election-lab': () => import('@/episodes/election-lab/index.ts'),
 }
 
 // ---------------------------------------------------------------------------

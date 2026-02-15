@@ -86,6 +86,15 @@ const episodes: Episode[] = [
     color: 'var(--physics)',
     available: true,
   },
+  {
+    nameKey: 'episodes.electionLab.name',
+    episodeId: 'election-lab',
+    domainKey: 'domains.civics',
+    iconName: 'civics',
+    hookKey: 'episodes.electionLab.hook',
+    color: 'var(--civics)',
+    available: true,
+  },
 ]
 
 export interface EpisodeGridProps {
